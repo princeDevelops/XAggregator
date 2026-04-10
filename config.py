@@ -8,7 +8,7 @@ GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # ── Run settings ───────────────────────────────────────────────────────────────
 MAX_ARTICLES_PER_CATEGORY = 3   # max sent to Discord per category per run
-MIN_KEYWORD_SCORE         = 1   # articles scoring below this are dropped
+MIN_KEYWORD_SCORE         = 3   # requires at least one title keyword hit
 REQUEST_TIMEOUT           = 12  # seconds for HTTP requests
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "

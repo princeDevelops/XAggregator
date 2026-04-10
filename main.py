@@ -15,7 +15,7 @@ import time
 
 from config import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MIN_KEYWORD_SCORE
 from db     import init_db, is_seen, mark_seen, get_daily_usage, increment_usage
-from fetcher     import fetch_category_articles, scrape_og_image
+from fetcher     import fetch_category_articles, scrape_og_image, is_india_relevant
 from gemini      import setup_gemini, generate_content
 from discord_bot import send_article
 
@@ -30,16 +30,21 @@ def process_category(category: dict) -> None:
         if sent >= MAX_ARTICLES_PER_CATEGORY:
             break
 
+        # must score at least one title keyword hit (score >= 3)
         if article["score"] < MIN_KEYWORD_SCORE:
+            continue
+
+        # hard India gate — title must mention India explicitly
+        if not is_india_relevant(article):
             continue
 
         if is_seen(article["url"]):
             continue
 
-        # always scrape og:image from the actual article page;
-        # RSS images are usually the source logo, not the article photo
-        scraped = scrape_og_image(article["url"])
-        article["image"] = scraped or article.get("image")
+        # try og:image scrape for non-Google-News URLs
+        # (Google News URLs already gave us an image from the RSS HTML)
+        if not article.get("image"):
+            article["image"] = scrape_og_image(article["url"])
 
         # Gemini — respect daily budget
         ai_content     = None

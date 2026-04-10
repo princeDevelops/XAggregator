@@ -1,5 +1,5 @@
 """
-RSS fetching, keyword scoring, and og:image extraction.
+RSS fetching, keyword scoring, and image extraction.
 """
 
 import time
@@ -9,20 +9,50 @@ from bs4 import BeautifulSoup
 
 from config import USER_AGENT, REQUEST_TIMEOUT
 
+# India-specific keywords that MUST appear in the title for an article to pass.
+# This hard-stops foreign news from leaking through.
+INDIA_TITLE_MUST = [
+    "india", "indian", "bharat", "modi", "delhi", "mumbai",
+    "bangalore", "bengaluru", "chennai", "hyderabad", "kolkata",
+    "bjp", "congress", "lok sabha", "rajya sabha", "kashmir",
+    "rbi", "sebi", "isro", "sensex", "nifty", "rupee",
+    "pakistan", "india-china", "india-pak",
+]
+
 
 # ── RSS ────────────────────────────────────────────────────────────────────────
+
+def _image_from_summary(summary_html: str) -> str | None:
+    """
+    Google News RSS embeds article thumbnails as <img> tags inside
+    the description HTML (hosted on lh3.googleusercontent.com).
+    Extract that before we discard the HTML.
+    """
+    if not summary_html:
+        return None
+    soup = BeautifulSoup(summary_html, "html.parser")
+    img  = soup.find("img")
+    if img:
+        src = img.get("src", "")
+        if src.startswith("http"):
+            return src
+    return None
+
 
 def fetch_feed(feed_url: str) -> list[dict]:
     """Parse one RSS feed and return a list of raw article dicts."""
     try:
-        feed = feedparser.parse(feed_url)
+        feed     = feedparser.parse(feed_url)
         articles = []
-        for entry in feed.entries[:20]:          # cap at 20 most-recent entries
+
+        for entry in feed.entries[:20]:
             url = entry.get("link", "").strip()
             if not url:
                 continue
 
-            # pull image from RSS enclosure / media tags if present
+            raw_summary = entry.get("summary", "")
+
+            # 1. try RSS media tags first
             image = None
             if hasattr(entry, "media_content") and entry.media_content:
                 image = entry.media_content[0].get("url")
@@ -34,11 +64,16 @@ def fetch_feed(feed_url: str) -> list[dict]:
                         image = enc.get("href") or enc.get("url")
                         break
 
+            # 2. fall back to <img> inside the description HTML
+            #    (Google News always has this — lh3.googleusercontent.com)
+            if not image:
+                image = _image_from_summary(raw_summary)
+
             articles.append({
                 "title":       entry.get("title", "").strip(),
                 "url":         url,
                 "description": BeautifulSoup(
-                    entry.get("summary", ""), "html.parser"
+                    raw_summary, "html.parser"
                 ).get_text(" ", strip=True)[:500],
                 "source":      feed.feed.get("title", "Unknown Source"),
                 "published":   entry.get("published", ""),
@@ -56,8 +91,8 @@ def fetch_feed(feed_url: str) -> list[dict]:
 
 def score_article(article: dict, keywords: list[str]) -> int:
     """
-    Return a relevance score.
-    Title match = 3 pts, description match = 1 pt (case-insensitive).
+    Title match = 3 pts, description match = 1 pt.
+    Minimum useful score is 3 (= at least one title hit).
     """
     title = article["title"].lower()
     desc  = article["description"].lower()
@@ -71,20 +106,27 @@ def score_article(article: dict, keywords: list[str]) -> int:
     return score
 
 
-# ── Image scraping ─────────────────────────────────────────────────────────────
+def is_india_relevant(article: dict) -> bool:
+    """
+    Hard gate: at least one core India keyword must appear in the title.
+    Blocks foreign articles that only mention India in passing.
+    """
+    title = article["title"].lower()
+    return any(kw in title for kw in INDIA_TITLE_MUST)
+
+
+# ── og:image scrape (for non-Google-News feeds) ───────────────────────────────
 
 def scrape_og_image(url: str) -> str | None:
-    """Try to extract og:image or twitter:image from an article page."""
-    # domains that only serve logos/icons — not worth embedding
-    _SKIP_DOMAINS = ("gstatic.com", "google.com/s2", "googleusercontent.com")
+    """Try to extract og:image from an article page. Skip Google News URLs."""
+    if "news.google.com" in url:
+        return None   # Google News redirect pages don't have og:image
 
     try:
         headers = {
             "User-Agent":      USER_AGENT,
-            "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept":          "text/html,application/xhtml+xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-IN,en;q=0.9",
-            "Accept-Encoding": "gzip, deflate",
-            "Connection":      "keep-alive",
         }
         resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT,
                             allow_redirects=True)
@@ -94,11 +136,10 @@ def scrape_og_image(url: str) -> str | None:
             ("property", "og:image"),
             ("name",     "twitter:image"),
             ("property", "og:image:secure_url"),
-            ("name",     "og:image"),
         ]:
             tag = soup.find("meta", attrs={attr: name})
             img = tag.get("content", "") if tag else ""
-            if img.startswith("http") and not any(d in img for d in _SKIP_DOMAINS):
+            if img.startswith("http"):
                 return img
         return None
     except Exception:
@@ -109,24 +150,21 @@ def scrape_og_image(url: str) -> str | None:
 
 def fetch_category_articles(category: dict) -> list[dict]:
     """
-    Fetch all feeds for a category, score, deduplicate within the batch,
-    and return sorted (highest score first).
+    Fetch all feeds for a category, score, deduplicate, and return
+    sorted by score (highest first).
     """
     seen_urls: set[str] = set()
     all_articles: list[dict] = []
 
     for feed_url in category["feeds"]:
-        articles = fetch_feed(feed_url)
-        for article in articles:
+        for article in fetch_feed(feed_url):
             if article["url"] in seen_urls:
                 continue
             seen_urls.add(article["url"])
-
             article["score"]    = score_article(article, category["keywords"])
             article["category"] = category["name"]
             all_articles.append(article)
-
-        time.sleep(0.5)   # be polite between feed requests
+        time.sleep(0.5)
 
     all_articles.sort(key=lambda a: a["score"], reverse=True)
     return all_articles
