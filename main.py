@@ -36,18 +36,22 @@ def process_category(category: dict) -> None:
         if is_seen(article["url"]):
             continue
 
-        # fetch image if RSS didn't provide one
-        if not article.get("image"):
-            article["image"] = scrape_og_image(article["url"])
+        # always scrape og:image from the actual article page;
+        # RSS images are usually the source logo, not the article photo
+        scraped = scrape_og_image(article["url"])
+        article["image"] = scraped or article.get("image")
 
         # Gemini — respect daily budget
-        ai_content = None
+        ai_content     = None
+        budget_reached = False
         if get_daily_usage(name) < budget:
             ai_content = generate_content(article)
             if ai_content:
                 increment_usage(name)
+        else:
+            budget_reached = True
 
-        ok = send_article(article, ai_content)
+        ok = send_article(article, ai_content, budget_reached=budget_reached)
         if ok:
             mark_seen(article["url"], article["title"])
             sent += 1

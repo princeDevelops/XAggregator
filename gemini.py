@@ -9,6 +9,9 @@ from config import GEMINI_API_KEY, GEMINI_MODEL
 
 
 def setup_gemini() -> None:
+    if not GEMINI_API_KEY:
+        print("[gemini] WARNING: GEMINI_API_KEY is not set — summaries will be skipped.")
+        return
     genai.configure(api_key=GEMINI_API_KEY)
 
 

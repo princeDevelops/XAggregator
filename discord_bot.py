@@ -29,7 +29,7 @@ EMOJIS = {
 }
 
 
-def _build_embed(article: dict, ai: dict | None) -> dict:
+def _build_embed(article: dict, ai: dict | None, budget_reached: bool = False) -> dict:
     category = article["category"]
     emoji    = EMOJIS.get(category, "📰")
     color    = COLORS.get(category, 0x808080)
@@ -42,7 +42,13 @@ def _build_embed(article: dict, ai: dict | None) -> dict:
     if ai and ai.get("draft_tweet"):
         parts.append(f"**📝 Draft tweet:**\n{ai['draft_tweet']}")
 
-    description = "\n\n".join(parts) if parts else "*No summary available — Gemini budget reached.*"
+    if not parts:
+        if budget_reached:
+            description = "*Daily Gemini budget used up for this category.*"
+        else:
+            description = "*Summary unavailable — check GEMINI_API_KEY in GitHub Secrets.*"
+    else:
+        description = "\n\n".join(parts)
 
     embed: dict = {
         "author":      {"name": f"{emoji}  {category}"},
@@ -59,13 +65,13 @@ def _build_embed(article: dict, ai: dict | None) -> dict:
     return embed
 
 
-def send_article(article: dict, ai: dict | None) -> bool:
+def send_article(article: dict, ai: dict | None, budget_reached: bool = False) -> bool:
     """
     POST one article embed to the Discord webhook.
     Returns True on success, False on failure.
     Retries once on HTTP 429 (rate limit).
     """
-    embed   = _build_embed(article, ai)
+    embed   = _build_embed(article, ai, budget_reached=budget_reached)
     payload = {"embeds": [embed]}
 
     for attempt in range(2):
