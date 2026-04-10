@@ -75,19 +75,31 @@ def score_article(article: dict, keywords: list[str]) -> int:
 
 def scrape_og_image(url: str) -> str | None:
     """Try to extract og:image or twitter:image from an article page."""
+    # domains that only serve logos/icons — not worth embedding
+    _SKIP_DOMAINS = ("gstatic.com", "google.com/s2", "googleusercontent.com")
+
     try:
-        headers  = {"User-Agent": USER_AGENT}
-        resp     = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT)
-        soup     = BeautifulSoup(resp.text, "html.parser")
+        headers = {
+            "User-Agent":      USER_AGENT,
+            "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-IN,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate",
+            "Connection":      "keep-alive",
+        }
+        resp = requests.get(url, headers=headers, timeout=REQUEST_TIMEOUT,
+                            allow_redirects=True)
+        soup = BeautifulSoup(resp.text, "html.parser")
 
         for attr, name in [
             ("property", "og:image"),
             ("name",     "twitter:image"),
             ("property", "og:image:secure_url"),
+            ("name",     "og:image"),
         ]:
             tag = soup.find("meta", attrs={attr: name})
-            if tag and tag.get("content", "").startswith("http"):
-                return tag["content"]
+            img = tag.get("content", "") if tag else ""
+            if img.startswith("http") and not any(d in img for d in _SKIP_DOMAINS):
+                return img
         return None
     except Exception:
         return None
