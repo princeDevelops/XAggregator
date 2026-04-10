@@ -1,86 +1,69 @@
 """
-Gemini API — direct REST calls via requests.
-No SDK dependency, works with any valid API key.
+Gemini API — direct REST, no SDK.
+Only generates the draft tweet; RSS description is used as the summary.
 """
 
-import re
 import requests
 from config import GEMINI_API_KEY
 
-_API_URL = (
-    "https://generativelanguage.googleapis.com"
-    "/v1beta/models/gemini-2.0-flash:generateContent"
-)
+# Try both v1 and v1beta — some models only live on one
+_ENDPOINTS = [
+    "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent",
+    "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent",
+]
 
 
 def setup_gemini() -> None:
     if not GEMINI_API_KEY:
-        print("[gemini] WARNING: GEMINI_API_KEY not set — summaries will be skipped.")
+        print("[gemini] WARNING: GEMINI_API_KEY not set.")
     else:
-        print("[gemini] API key loaded.")
+        print(f"[gemini] key loaded (ends ...{GEMINI_API_KEY[-6:]})")
 
 
-def generate_content(article: dict) -> dict | None:
+def generate_draft_tweet(article: dict) -> str | None:
     """
-    Call Gemini REST API and return:
-        { "summary": "...", "draft_tweet": "..." }
-    Returns None on any failure.
+    Ask Gemini to write a single punchy draft tweet based on the article.
+    Returns the tweet string, or None on failure.
     """
     if not GEMINI_API_KEY:
         return None
 
-    prompt = f"""You are a sharp, concise Indian news analyst writing for an audience on X (Twitter).
-
-Article details:
-  Title:       {article['title']}
-  Description: {article.get('description', 'N/A')}
-  Source:      {article.get('source', 'N/A')}
-
-Produce two things:
-
-SUMMARY:
-Write 3-4 sentences. Cover what happened, why it matters for India, and what comes next.
-Be specific — no vague filler. Plain English.
-
-DRAFT_TWEET:
-Write a single tweet under 220 characters.
-- Open with a punchy statement (not a question).
-- Present tense. Sound like a smart informed person, not a bot.
-- No hashtags. No emojis. No "BREAKING".
-
-Reply in this exact format and nothing else:
-SUMMARY: <your summary here>
-DRAFT_TWEET: <your tweet here>"""
+    prompt = (
+        f"Write a single tweet under 220 characters about this Indian news story.\n"
+        f"Title: {article['title']}\n"
+        f"Summary: {article.get('description', '')[:300]}\n\n"
+        f"Rules: present tense, punchy opening, no hashtags, no emojis, "
+        f"no 'BREAKING', sound like a smart informed Indian observer.\n"
+        f"Reply with ONLY the tweet text, nothing else."
+    )
 
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.4, "maxOutputTokens": 400},
+        "contents":         [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.5, "maxOutputTokens": 120},
     }
 
-    try:
-        resp = requests.post(
-            _API_URL,
-            params={"key": GEMINI_API_KEY},
-            json=payload,
-            timeout=30,
-        )
-        resp.raise_for_status()
+    for endpoint in _ENDPOINTS:
+        try:
+            resp = requests.post(
+                endpoint,
+                params={"key": GEMINI_API_KEY},
+                json=payload,
+                timeout=25,
+            )
 
-        text = (
-            resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-        )
+            if not resp.ok:
+                print(f"  [gemini] {endpoint.split('/v')[1][:10]} → "
+                      f"HTTP {resp.status_code}: {resp.text[:200]}")
+                continue
 
-        summary_match = re.search(r"SUMMARY:\s*(.*?)(?=\nDRAFT_TWEET:|$)", text, re.DOTALL)
-        tweet_match   = re.search(r"DRAFT_TWEET:\s*(.*?)$",                 text, re.DOTALL)
+            tweet = (
+                resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+                .strip().strip('"')
+            )
+            return tweet[:220] if tweet else None
 
-        summary     = summary_match.group(1).strip() if summary_match else ""
-        draft_tweet = tweet_match.group(1).strip()   if tweet_match   else ""
+        except Exception as exc:
+            print(f"  [gemini] error on {endpoint}: {exc}")
+            continue
 
-        if not summary and not draft_tweet:
-            return None
-
-        return {"summary": summary, "draft_tweet": draft_tweet}
-
-    except Exception as exc:
-        print(f"  [gemini] error: {exc}")
-        return None
+    return None
