@@ -127,18 +127,24 @@ def fetch_feed(feed_url: str) -> list[dict]:
             # ── image: try every RSS field in priority order ──────────────────
             image = None
 
-            # 1. media:content   (ET, many sites)
-            mc = entry.get("media_content", [])
-            if mc and isinstance(mc, list):
-                image = mc[0].get("url")
+            # 1. media:content  (Economic Times, Indian Express, many sites)
+            for mc in entry.get("media_content", []):
+                url_candidate = mc.get("url", "")
+                if url_candidate.startswith("http") and "googleusercontent.com" not in url_candidate:
+                    image = url_candidate
+                    break
 
-            # 2. media:thumbnail  (Google News, NDTV via FeedBurner)
+            # 2. media:thumbnail  (NDTV via FeedBurner, News18)
+            #    Skip googleusercontent.com — those are Google's auto-generated
+            #    title cards that visually repeat the headline, not real photos.
             if not image:
-                mt = entry.get("media_thumbnail", [])
-                if mt and isinstance(mt, list):
-                    image = mt[0].get("url")
+                for mt in entry.get("media_thumbnail", []):
+                    url_candidate = mt.get("url", "")
+                    if url_candidate.startswith("http") and "googleusercontent.com" not in url_candidate:
+                        image = url_candidate
+                        break
 
-            # 3. enclosure        (Times of India)
+            # 3. enclosure  (Times of India)
             if not image:
                 for enc in entry.get("enclosures", []):
                     if enc.get("type", "").startswith("image/"):
@@ -156,8 +162,19 @@ def fetch_feed(feed_url: str) -> list[dict]:
             if not image:
                 image = _extract_image_from_html(raw_summary)
 
-            # ── description: plain text from RSS ─────────────────────────────
-            rss_desc = BeautifulSoup(raw_summary, "html.parser").get_text(" ", strip=True)
+            # ── description: prefer content:encoded (full article excerpt) ───
+            # Many direct RSS feeds put 2-3 paragraphs in <content:encoded>
+            # which is far richer than the short <description> snippet.
+            rss_desc = ""
+            for ct in entry.get("content", []):
+                full_text = BeautifulSoup(
+                    ct.get("value", ""), "html.parser"
+                ).get_text(" ", strip=True)
+                if len(full_text) > len(rss_desc):
+                    rss_desc = full_text[:600]
+
+            if not rss_desc:
+                rss_desc = BeautifulSoup(raw_summary, "html.parser").get_text(" ", strip=True)
 
             articles.append({
                 "title":       entry.get("title", "").strip(),
