@@ -5,28 +5,22 @@ Flow (every 30 min via GitHub Actions):
   For each category (priority order):
     1. Fetch & score articles from RSS feeds
     2. Skip already-seen URLs (SQLite)
-    3. Skip if no India keyword in title (hard gate)
-    4. Scrape real article page → fill missing image + description in one call
-    5. Call Gemini for draft tweet (if daily budget remains)
-    6. Send to Discord
-    7. Mark URL as seen
+    3. Skip if no India keyword in title
+    4. Fill missing image / description by scraping real article page
+    5. Send to Discord
+    6. Mark URL as seen
 """
 
 import time
 
 from config      import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MIN_KEYWORD_SCORE
-from db          import init_db, is_seen, mark_seen, get_daily_usage, increment_usage
+from db          import init_db, is_seen, mark_seen
 from fetcher     import fetch_category_articles, scrape_article_meta, is_india_relevant
-from gemini      import setup_gemini, generate_draft_tweet
 from discord_bot import send_article
-
-# Gemini free tier = 15 requests/minute → must wait ≥4s between calls
-_GEMINI_DELAY = 5
 
 
 def process_category(category: dict) -> None:
     name     = category["name"]
-    budget   = category["gemini_budget"]
     articles = fetch_category_articles(category)
 
     sent = 0
@@ -40,8 +34,8 @@ def process_category(category: dict) -> None:
         if is_seen(article["url"]):
             continue
 
-        # Scrape real article page if we're missing image or description.
-        # One HTTP call returns both — handles Google News redirect URLs too.
+        # If image or description is missing/thin, scrape the real article page.
+        # _decode_gnews_url handles Google News redirect URLs automatically.
         needs_image = not article.get("image")
         needs_desc  = len(article.get("description", "")) < 80
 
@@ -52,15 +46,7 @@ def process_category(category: dict) -> None:
             if needs_desc and meta["description"]:
                 article["description"] = meta["description"]
 
-        # Gemini — draft tweet only
-        draft_tweet = None
-        if get_daily_usage(name) < budget:
-            draft_tweet = generate_draft_tweet(article)
-            if draft_tweet:
-                increment_usage(name)
-                time.sleep(_GEMINI_DELAY)   # respect 15 RPM free tier limit
-
-        ok = send_article(article, draft_tweet)
+        ok = send_article(article)
         if ok:
             mark_seen(article["url"], article["title"])
             sent += 1
@@ -79,7 +65,6 @@ def main() -> None:
     print("=" * 60)
 
     init_db()
-    setup_gemini()
 
     for category in CATEGORIES:
         print(f"\n[{category['priority']}] {category['name']}")

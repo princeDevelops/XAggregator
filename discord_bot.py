@@ -1,7 +1,7 @@
 """
 Discord webhook integration.
-Summary = RSS description (always present).
-Draft tweet = Gemini output (when available).
+Summary = RSS or scraped og:description.
+No Gemini dependency.
 """
 
 import time
@@ -29,21 +29,13 @@ EMOJIS = {
 }
 
 
-def _build_embed(article: dict, draft_tweet: str | None) -> dict:
+def send_article(article: dict) -> bool:
     category = article["category"]
     emoji    = EMOJIS.get(category, "📰")
     color    = COLORS.get(category, 0x808080)
     now_utc  = datetime.now(timezone.utc).strftime("%H:%M UTC")
 
-    # RSS description is always the summary — no API needed
-    parts = []
-    if article.get("description"):
-        parts.append(article["description"])
-
-    if draft_tweet:
-        parts.append(f"**📝 Draft tweet:**\n{draft_tweet}")
-
-    description = "\n\n".join(parts) if parts else "*No description available.*"
+    description = article.get("description", "").strip() or "*No description available.*"
 
     embed: dict = {
         "author":      {"name": f"{emoji}  {category}"},
@@ -57,20 +49,15 @@ def _build_embed(article: dict, draft_tweet: str | None) -> dict:
     if article.get("image"):
         embed["image"] = {"url": article["image"]}
 
-    return embed
-
-
-def send_article(article: dict, draft_tweet: str | None) -> bool:
-    embed   = _build_embed(article, draft_tweet)
     payload = {"embeds": [embed]}
 
     for attempt in range(2):
         try:
             resp = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
             if resp.status_code == 429:
-                retry_after = resp.json().get("retry_after", 2)
-                print(f"  [discord] rate-limited, waiting {retry_after}s")
-                time.sleep(float(retry_after) + 0.5)
+                wait = resp.json().get("retry_after", 2)
+                print(f"  [discord] rate-limited, waiting {wait}s")
+                time.sleep(float(wait) + 0.5)
                 continue
             resp.raise_for_status()
             return True
