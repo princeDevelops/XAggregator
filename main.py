@@ -6,9 +6,9 @@ Flow (every 30 min via GitHub Actions):
     1. Fetch & score articles from RSS feeds
     2. Skip already-seen URLs (SQLite)
     3. Skip if no India keyword in title (hard gate)
-    4. Resolve real URL → scrape og:image
+    4. Scrape real article page → fill missing image + description in one call
     5. Call Gemini for draft tweet (if daily budget remains)
-    6. Send to Discord: RSS description as summary + draft tweet
+    6. Send to Discord
     7. Mark URL as seen
 """
 
@@ -16,9 +16,12 @@ import time
 
 from config      import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MIN_KEYWORD_SCORE
 from db          import init_db, is_seen, mark_seen, get_daily_usage, increment_usage
-from fetcher     import fetch_category_articles, scrape_og_image, is_india_relevant
+from fetcher     import fetch_category_articles, scrape_article_meta, is_india_relevant
 from gemini      import setup_gemini, generate_draft_tweet
 from discord_bot import send_article
+
+# Gemini free tier = 15 requests/minute → must wait ≥4s between calls
+_GEMINI_DELAY = 5
 
 
 def process_category(category: dict) -> None:
@@ -30,27 +33,32 @@ def process_category(category: dict) -> None:
     for article in articles:
         if sent >= MAX_ARTICLES_PER_CATEGORY:
             break
-
         if article["score"] < MIN_KEYWORD_SCORE:
             continue
-
         if not is_india_relevant(article):
             continue
-
         if is_seen(article["url"]):
             continue
 
-        # scrape og:image if RSS didn't provide one
-        # (fetcher resolves Google News redirect URLs automatically)
-        if not article.get("image"):
-            article["image"] = scrape_og_image(article["url"])
+        # Scrape real article page if we're missing image or description.
+        # One HTTP call returns both — handles Google News redirect URLs too.
+        needs_image = not article.get("image")
+        needs_desc  = len(article.get("description", "")) < 80
 
-        # Gemini — draft tweet only, RSS description is the summary
+        if needs_image or needs_desc:
+            meta = scrape_article_meta(article["url"])
+            if needs_image and meta["image"]:
+                article["image"] = meta["image"]
+            if needs_desc and meta["description"]:
+                article["description"] = meta["description"]
+
+        # Gemini — draft tweet only
         draft_tweet = None
         if get_daily_usage(name) < budget:
             draft_tweet = generate_draft_tweet(article)
             if draft_tweet:
                 increment_usage(name)
+                time.sleep(_GEMINI_DELAY)   # respect 15 RPM free tier limit
 
         ok = send_article(article, draft_tweet)
         if ok:

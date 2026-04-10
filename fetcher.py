@@ -1,5 +1,5 @@
 """
-RSS fetching, keyword scoring, and image extraction.
+RSS fetching, keyword scoring, image + description extraction.
 """
 
 import time
@@ -24,35 +24,54 @@ _HEADERS = {
 }
 
 
-# ── Google News URL resolver ───────────────────────────────────────────────────
+# ── Article meta scraper ───────────────────────────────────────────────────────
 
-def _resolve_url(url: str) -> str:
+def scrape_article_meta(url: str) -> dict:
     """
-    Google News RSS links are redirect URLs (news.google.com/rss/articles/...).
-    Follow the redirect chain to get the real article URL so we can
-    scrape og:image from it.
+    Follow any redirects (handles Google News redirect URLs),
+    then scrape og:image and og:description from the real article page.
+    Returns {"image": str|None, "description": str|None}.
     """
-    if "news.google.com" not in url:
-        return url
+    result = {"image": None, "description": None}
     try:
-        # HEAD is faster — just follow redirects, don't download body
-        resp = requests.head(url, headers=_HEADERS, timeout=8,
-                             allow_redirects=True)
-        final = resp.url
-        # If HEAD lands back on Google, fall back to GET
-        if "google.com" in final:
-            resp = requests.get(url, headers=_HEADERS, timeout=8,
+        resp     = requests.get(url, headers=_HEADERS, timeout=REQUEST_TIMEOUT,
                                 allow_redirects=True)
-            final = resp.url
-        return final if "google.com" not in final else url
-    except Exception:
-        return url
+        soup     = BeautifulSoup(resp.text, "html.parser")
+
+        # image — try og:image then twitter:image
+        for attr, name in [
+            ("property", "og:image"),
+            ("name",     "twitter:image"),
+            ("property", "og:image:secure_url"),
+        ]:
+            tag = soup.find("meta", attrs={attr: name})
+            val = tag.get("content", "") if tag else ""
+            if val.startswith("http"):
+                result["image"] = val
+                break
+
+        # description — try og:description then meta description
+        for attr, name in [
+            ("property", "og:description"),
+            ("name",     "description"),
+            ("name",     "twitter:description"),
+        ]:
+            tag = soup.find("meta", attrs={attr: name})
+            val = (tag.get("content", "") if tag else "").strip()
+            if len(val) > 40:          # ignore one-word or empty values
+                result["description"] = val[:600]
+                break
+
+    except Exception as exc:
+        print(f"  [fetcher] meta scrape failed ({url[:60]}): {exc}")
+
+    return result
 
 
 # ── RSS ────────────────────────────────────────────────────────────────────────
 
 def fetch_feed(feed_url: str) -> list[dict]:
-    """Parse one RSS feed and return a list of raw article dicts."""
+    """Parse one RSS feed, return list of raw article dicts."""
     try:
         feed     = feedparser.parse(feed_url)
         articles = []
@@ -64,7 +83,7 @@ def fetch_feed(feed_url: str) -> list[dict]:
 
             raw_summary = entry.get("summary", "")
 
-            # try RSS media tags for image
+            # image from RSS media tags (works for NDTV, ET, etc.)
             image = None
             if hasattr(entry, "media_content") and entry.media_content:
                 image = entry.media_content[0].get("url")
@@ -76,12 +95,15 @@ def fetch_feed(feed_url: str) -> list[dict]:
                         image = enc.get("href") or enc.get("url")
                         break
 
+            # description from RSS
+            rss_desc = BeautifulSoup(
+                raw_summary, "html.parser"
+            ).get_text(" ", strip=True)
+
             articles.append({
                 "title":       entry.get("title", "").strip(),
                 "url":         url,
-                "description": BeautifulSoup(
-                    raw_summary, "html.parser"
-                ).get_text(" ", strip=True)[:600],
+                "description": rss_desc,
                 "source":      feed.feed.get("title", "Unknown Source"),
                 "published":   entry.get("published", ""),
                 "image":       image,
@@ -114,37 +136,10 @@ def is_india_relevant(article: dict) -> bool:
     return any(kw in title for kw in INDIA_TITLE_MUST)
 
 
-# ── og:image scraping ──────────────────────────────────────────────────────────
-
-def scrape_og_image(url: str) -> str | None:
-    """
-    Resolve the real article URL (follows Google News redirects),
-    then extract og:image from it.
-    """
-    real_url = _resolve_url(url)
-    try:
-        resp = requests.get(real_url, headers=_HEADERS, timeout=REQUEST_TIMEOUT,
-                            allow_redirects=True)
-        soup = BeautifulSoup(resp.text, "html.parser")
-
-        for attr, name in [
-            ("property", "og:image"),
-            ("name",     "twitter:image"),
-            ("property", "og:image:secure_url"),
-        ]:
-            tag = soup.find("meta", attrs={attr: name})
-            img = tag.get("content", "") if tag else ""
-            if img.startswith("http"):
-                return img
-        return None
-    except Exception:
-        return None
-
-
 # ── Main fetch for one category ────────────────────────────────────────────────
 
 def fetch_category_articles(category: dict) -> list[dict]:
-    seen_urls:    set[str]  = set()
+    seen_urls:    set[str]   = set()
     all_articles: list[dict] = []
 
     for feed_url in category["feeds"]:
