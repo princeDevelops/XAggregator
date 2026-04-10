@@ -1,0 +1,40 @@
+name: XAggregator
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # every 30 minutes
+  workflow_dispatch:           # allow manual trigger from GitHub UI
+
+jobs:
+  aggregate:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # Restore the SQLite database from the previous run.
+      # restore-keys ensures we always get the most recent cache
+      # even if the exact key (run number) doesn't match.
+      - name: Restore database cache
+        uses: actions/cache@v4
+        with:
+          path: data/
+          key: xaggregator-db-${{ github.run_number }}
+          restore-keys: |
+            xaggregator-db-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run aggregator
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          GEMINI_API_KEY:      ${{ secrets.GEMINI_API_KEY }}
+        run: python main.py

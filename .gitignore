@@ -1,0 +1,10 @@
+# database (persisted via GitHub Actions cache, not git)
+data/
+
+# python
+__pycache__/
+*.py[cod]
+*.pyo
+.env
+venv/
+.venv/
