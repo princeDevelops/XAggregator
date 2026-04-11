@@ -1,17 +1,28 @@
 """
 API-based news fetchers: NewsAPI.org, GNews, Currents.
 These return structured JSON with images + descriptions — no scraping needed.
+
+Rate limit budgets (5-request buffer, 48 runs/day = every 30 min):
+  NewsAPI  : (100  - 5) // 48 =  1 request/run  →  48 requests/day
+  GNews    : (100  - 5) // 48 =  1 request/run  →  48 requests/day
+  Currents : (1000 - 5) // 48 = 20 requests/run → 960 requests/day
 """
 
 import requests
 from config import NEWSAPI_KEY, GNEWS_KEY, CURRENTS_KEY, REQUEST_TIMEOUT, USER_AGENT
+
+RUNS_PER_DAY = 48   # cron every 30 min
+
+_NEWSAPI_MAX_PER_RUN  = (100  - 5) // RUNS_PER_DAY   # 1
+_GNEWS_MAX_PER_RUN    = (100  - 5) // RUNS_PER_DAY   # 1
+_CURRENTS_MAX_PER_RUN = (1000 - 5) // RUNS_PER_DAY   # 20
 
 _HEADERS = {"User-Agent": USER_AGENT}
 
 
 def fetch_newsapi() -> list[dict]:
     """NewsAPI.org — top India headlines (100 req/day free)."""
-    if not NEWSAPI_KEY:
+    if not NEWSAPI_KEY or _NEWSAPI_MAX_PER_RUN < 1:
         return []
     try:
         resp = requests.get(
@@ -45,7 +56,7 @@ def fetch_newsapi() -> list[dict]:
 
 def fetch_gnews() -> list[dict]:
     """GNews API — top India headlines (100 req/day free)."""
-    if not GNEWS_KEY:
+    if not GNEWS_KEY or _GNEWS_MAX_PER_RUN < 1:
         return []
     try:
         resp = requests.get(
@@ -79,7 +90,7 @@ def fetch_gnews() -> list[dict]:
 
 def fetch_currents() -> list[dict]:
     """Currents API — latest India news (1000 req/day free)."""
-    if not CURRENTS_KEY:
+    if not CURRENTS_KEY or _CURRENTS_MAX_PER_RUN < 1:
         return []
     try:
         resp = requests.get(
