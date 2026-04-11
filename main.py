@@ -2,13 +2,9 @@
 XAggregator — entry point.
 
 Flow (every 30 min via GitHub Actions):
-  For each category (priority order):
-    1. Fetch & score articles from RSS feeds
-    2. Skip already-seen URLs (SQLite)
-    3. Skip if no India keyword in title
-    4. Fill missing image / description by scraping real article page
-    5. Send to Discord
-    6. Mark URL as seen
+  1. Fetch all articles across every category
+  2. Detect trending stories (3+ sources same story) → send TRENDING alerts first
+  3. Process each category normally → send individual articles
 """
 
 import time
@@ -16,15 +12,28 @@ import time
 from config      import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MIN_KEYWORD_SCORE
 from db          import init_db, is_seen, mark_seen
 from fetcher     import fetch_category_articles, scrape_article_meta, is_india_relevant
-from discord_bot import send_article
+from discord_bot import send_article, send_trending
+from trending    import detect_trending
 
 
-def process_category(category: dict) -> None:
-    name     = category["name"]
-    articles = fetch_category_articles(category)
+def _enrich(article: dict) -> None:
+    """Fill missing image / description by scraping the real article page."""
+    needs_image = not article.get("image")
+    needs_desc  = len(article.get("description", "")) < 80
+    if needs_image or needs_desc:
+        meta = scrape_article_meta(article["url"])
+        if needs_image and meta["image"]:
+            article["image"] = meta["image"]
+        if needs_desc and meta["description"]:
+            article["description"] = meta["description"]
 
+
+def process_category(category: dict, prefetched: list[dict]) -> int:
+    """Send up to MAX_ARTICLES_PER_CATEGORY unseen articles for this category."""
+    name = category["name"]
     sent = 0
-    for article in articles:
+
+    for article in prefetched:
         if sent >= MAX_ARTICLES_PER_CATEGORY:
             break
         if article["score"] < MIN_KEYWORD_SCORE:
@@ -34,17 +43,7 @@ def process_category(category: dict) -> None:
         if is_seen(article["url"]):
             continue
 
-        # If image or description is missing/thin, scrape the real article page.
-        # _decode_gnews_url handles Google News redirect URLs automatically.
-        needs_image = not article.get("image")
-        needs_desc  = len(article.get("description", "")) < 80
-
-        if needs_image or needs_desc:
-            meta = scrape_article_meta(article["url"])
-            if needs_image and meta["image"]:
-                article["image"] = meta["image"]
-            if needs_desc and meta["description"]:
-                article["description"] = meta["description"]
+        _enrich(article)
 
         webhook_key = category.get("webhook")
         ok = send_article(article, webhook_key=webhook_key)
@@ -58,6 +57,7 @@ def process_category(category: dict) -> None:
         time.sleep(1.2)
 
     print(f"  → {sent} article(s) sent for {name}")
+    return sent
 
 
 def main() -> None:
@@ -67,9 +67,42 @@ def main() -> None:
 
     init_db()
 
+    # ── Step 1: fetch all articles across every category ──────────────────────
+    print("\n[fetching all feeds...]")
+    category_articles: dict[str, list[dict]] = {}
+    all_articles: list[dict] = []
+
+    for category in CATEGORIES:
+        articles = fetch_category_articles(category)
+        # only keep new + India-relevant + min-scored for trending detection
+        fresh = [
+            a for a in articles
+            if a["score"] >= MIN_KEYWORD_SCORE
+            and is_india_relevant(a)
+            and not is_seen(a["url"])
+        ]
+        category_articles[category["name"]] = articles   # full list for normal processing
+        all_articles.extend(fresh)
+
+    # ── Step 2: detect trending stories ───────────────────────────────────────
+    trending_stories = detect_trending(all_articles)
+
+    if trending_stories:
+        print(f"\n[🔴 TRENDING — {len(trending_stories)} story(s) detected]")
+        for story in trending_stories:
+            rep = story["representative"]
+            _enrich(rep)
+            ok = send_trending(story)
+            if ok:
+                print(f"  🔴 TRENDING [{story['count']} sources] {rep['title'][:70]}")
+            time.sleep(1.2)
+    else:
+        print("\n[no trending stories this run]")
+
+    # ── Step 3: process categories normally ───────────────────────────────────
     for category in CATEGORIES:
         print(f"\n[{category['priority']}] {category['name']}")
-        process_category(category)
+        process_category(category, category_articles[category["name"]])
         time.sleep(2)
 
     print("\n" + "=" * 60)
