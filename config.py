@@ -41,6 +41,7 @@ CATEGORIES = [
             "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms",
             "https://indianexpress.com/section/india/feed/",
             "https://www.news18.com/rss/india.xml",
+            "https://feeds.reuters.com/reuters/INtopNews",
         ],
     },
     {
@@ -67,6 +68,7 @@ CATEGORIES = [
             "https://feeds.feedburner.com/ndtvnews-world-news",
             "https://indianexpress.com/section/world/feed/",
             "https://timesofindia.indiatimes.com/rssfeeds/-2128672765.cms",
+            "https://feeds.reuters.com/reuters/INdomesticNews",
         ],
     },
     {
@@ -143,6 +145,7 @@ CATEGORIES = [
             "https://feeds.feedburner.com/ndtvnews-business-news",
             "https://www.thehindu.com/business/feeder/default.rss",
             "https://indianexpress.com/section/business/feed/",
+            "https://feeds.reuters.com/reuters/INbusinessNews",
         ],
     },
     {
