@@ -12,7 +12,7 @@ import time
 from config      import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MIN_KEYWORD_SCORE
 from db          import init_db, is_seen, mark_seen
 from fetcher     import fetch_category_articles, scrape_article_meta, is_india_relevant
-from discord_bot import send_article, send_trending
+from discord_bot import send_article, send_trending, send_run_summary
 from trending    import detect_trending
 
 
@@ -103,10 +103,15 @@ def main() -> None:
         print("\n[no trending stories this run]")
 
     # ── Step 3: process categories normally ───────────────────────────────────
+    counts: dict[str, int] = {}
     for category in CATEGORIES:
         print(f"\n[{category['priority']}] {category['name']}")
-        process_category(category, category_articles[category["name"]])
+        sent = process_category(category, category_articles[category["name"]])
+        counts[category["name"]] = sent
         time.sleep(2)
+
+    # ── Step 4: run summary ────────────────────────────────────────────────────
+    send_run_summary(counts, trending_count=len(trending_stories))
 
     print("\n" + "=" * 60)
     print("Run complete.")

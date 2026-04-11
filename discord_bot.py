@@ -36,6 +36,56 @@ _WEBHOOK_MAP = {
 }
 
 
+def send_run_summary(counts: dict[str, int], trending_count: int) -> bool:
+    """
+    Post a run summary message to the main Discord channel.
+    counts = { "INDIA": 15, "GEOPOLITICS & WARS": 12, ... }
+    """
+    total = sum(counts.values())
+    now_utc = datetime.now(timezone.utc).strftime("%H:%M UTC")
+
+    # build per-category line
+    lines = []
+    for name, count in counts.items():
+        if name == "GOOGLE ALERTS":
+            continue   # excluded from main summary
+        emoji = EMOJIS.get(name, "📰")
+        lines.append(f"{emoji} {name.title()}: **{count}**")
+
+    # chunk into rows of 3
+    rows = []
+    for i in range(0, len(lines), 3):
+        rows.append("   ".join(lines[i:i+3]))
+
+    trending_line = f"🔴 Trending stories flagged: **{trending_count}**\n" if trending_count else ""
+
+    description = trending_line + "\n".join(rows)
+
+    embed = {
+        "title":       f"✅ Run complete — {total} articles sent",
+        "description": description,
+        "color":       0x2ECC71,
+        "footer":      {"text": now_utc},
+    }
+
+    payload = {"embeds": [embed]}
+
+    for attempt in range(2):
+        try:
+            resp = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
+            if resp.status_code == 429:
+                wait = resp.json().get("retry_after", 2)
+                time.sleep(float(wait) + 0.5)
+                continue
+            resp.raise_for_status()
+            return True
+        except Exception as exc:
+            print(f"  [discord] summary send error (attempt {attempt + 1}): {exc}")
+            time.sleep(1)
+
+    return False
+
+
 def send_trending(trending_story: dict) -> bool:
     """
     Send a 🔴 TRENDING alert embed to the main Discord channel.
