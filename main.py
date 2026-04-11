@@ -9,7 +9,7 @@ Flow (every 30 min via GitHub Actions):
 
 import time
 
-from config      import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MAX_API_ARTICLES, MIN_KEYWORD_SCORE
+from config      import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MIN_KEYWORD_SCORE
 from db          import init_db, is_seen, mark_seen
 from fetcher     import fetch_category_articles, scrape_article_meta, is_india_relevant
 from discord_bot import send_article, send_trending, send_run_summary
@@ -115,8 +115,6 @@ def main() -> None:
     print("\n[fetching API news...]")
     api_sent = 0
     for article in fetch_all_api_news():
-        if api_sent >= MAX_API_ARTICLES:
-            break
         if is_seen(article["url"]):
             continue
         _enrich(article)

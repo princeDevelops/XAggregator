@@ -9,7 +9,8 @@ Rate limit budgets (5-request buffer, 48 runs/day = every 30 min):
 """
 
 import requests
-from config import NEWSAPI_KEY, GNEWS_KEY, CURRENTS_KEY, REQUEST_TIMEOUT, USER_AGENT
+from config import NEWSAPI_KEY, GNEWS_KEY, CURRENTS_KEY, CATEGORIES, REQUEST_TIMEOUT, USER_AGENT
+from fetcher import score_article
 
 RUNS_PER_DAY = 48   # cron every 30 min
 
@@ -20,6 +21,23 @@ _CURRENTS_MAX_PER_RUN = (1000 - 5) // RUNS_PER_DAY   # 20
 _HEADERS = {"User-Agent": USER_AGENT}
 
 
+def _assign_category(article: dict) -> str:
+    """
+    Run keyword scoring against every category and return the best match.
+    Falls back to 'API NEWS' if no category scores above 0.
+    """
+    best_cat   = "API NEWS"
+    best_score = 0
+    for cat in CATEGORIES:
+        if cat["name"] == "GOOGLE ALERTS":
+            continue
+        s = score_article(article, cat["keywords"])
+        if s > best_score:
+            best_score = s
+            best_cat   = cat["name"]
+    return best_cat
+
+
 def fetch_newsapi() -> list[dict]:
     """NewsAPI.org — top India headlines (100 req/day free)."""
     if not NEWSAPI_KEY or _NEWSAPI_MAX_PER_RUN < 1:
@@ -27,7 +45,7 @@ def fetch_newsapi() -> list[dict]:
     try:
         resp = requests.get(
             "https://newsapi.org/v2/top-headlines",
-            params={"country": "in", "pageSize": 20, "apiKey": NEWSAPI_KEY},
+            params={"country": "in", "pageSize": 100, "apiKey": NEWSAPI_KEY},
             headers=_HEADERS,
             timeout=REQUEST_TIMEOUT,
         )
@@ -44,7 +62,7 @@ def fetch_newsapi() -> list[dict]:
                 "source":      a.get("source", {}).get("name") or "NewsAPI",
                 "image":       a.get("urlToImage") or None,
                 "published":   a.get("publishedAt", ""),
-                "score":       5,
+                "score":       0,
                 "category":    "API NEWS",
             })
         print(f"  [newsapi] fetched={len(articles)}")
@@ -55,13 +73,13 @@ def fetch_newsapi() -> list[dict]:
 
 
 def fetch_gnews() -> list[dict]:
-    """GNews API — top India headlines (100 req/day free)."""
+    """GNews API — top India headlines (100 req/day free, max 10 per request on free tier)."""
     if not GNEWS_KEY or _GNEWS_MAX_PER_RUN < 1:
         return []
     try:
         resp = requests.get(
             "https://gnews.io/api/v4/top-headlines",
-            params={"country": "in", "lang": "en", "max": 20, "token": GNEWS_KEY},
+            params={"country": "in", "lang": "en", "max": 10, "token": GNEWS_KEY},
             headers=_HEADERS,
             timeout=REQUEST_TIMEOUT,
         )
@@ -78,7 +96,7 @@ def fetch_gnews() -> list[dict]:
                 "source":      a.get("source", {}).get("name") or "GNews",
                 "image":       a.get("image") or None,
                 "published":   a.get("publishedAt", ""),
-                "score":       5,
+                "score":       0,
                 "category":    "API NEWS",
             })
         print(f"  [gnews] fetched={len(articles)}")
@@ -115,7 +133,7 @@ def fetch_currents() -> list[dict]:
                 "source":      a.get("author") or "Currents",
                 "image":       image,
                 "published":   a.get("published", ""),
-                "score":       5,
+                "score":       0,
                 "category":    "API NEWS",
             })
         print(f"  [currents] fetched={len(articles)}")
@@ -126,7 +144,10 @@ def fetch_currents() -> list[dict]:
 
 
 def fetch_all_api_news() -> list[dict]:
-    """Fetch from all three APIs and deduplicate by URL."""
+    """
+    Fetch from all three APIs, deduplicate by URL, then assign each article
+    to the best-matching category via keyword scoring.
+    """
     seen_urls: set[str] = set()
     combined: list[dict] = []
 
@@ -134,6 +155,11 @@ def fetch_all_api_news() -> list[dict]:
         if article["url"] in seen_urls or not article["title"]:
             continue
         seen_urls.add(article["url"])
+        article["category"] = _assign_category(article)
+        article["score"]    = score_article(article, next(
+            (c["keywords"] for c in CATEGORIES if c["name"] == article["category"]),
+            []
+        ))
         combined.append(article)
 
     return combined
