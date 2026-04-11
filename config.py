@@ -195,6 +195,7 @@ CATEGORIES = [
         "gemini_budget": 0,
         "color":         0x4285F4,
         "webhook":       "GOOGLE_ALERTS_WEBHOOK_URL",   # sends to separate channel
+        "skip_filters":  True,   # Google Alert query already ensures relevance
         "keywords": [
             "india", "indian", "bharat",
         ],

@@ -33,13 +33,16 @@ def process_category(category: dict, prefetched: list[dict]) -> int:
     name = category["name"]
     sent = 0
 
+    skip_filters = category.get("skip_filters", False)
+
     for article in prefetched:
         if sent >= MAX_ARTICLES_PER_CATEGORY:
             break
-        if article["score"] < MIN_KEYWORD_SCORE:
-            continue
-        if not is_india_relevant(article):
-            continue
+        if not skip_filters:
+            if article["score"] < MIN_KEYWORD_SCORE:
+                continue
+            if not is_india_relevant(article):
+                continue
         if is_seen(article["url"]):
             continue
 
