@@ -7,8 +7,8 @@ DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # ── Run settings ───────────────────────────────────────────────────────────────
-MAX_ARTICLES_PER_CATEGORY = 10
-MIN_KEYWORD_SCORE         = 3   # at least one title keyword hit
+MAX_ARTICLES_PER_CATEGORY = 15
+MIN_KEYWORD_SCORE         = 3
 REQUEST_TIMEOUT           = 12
 USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -16,7 +16,7 @@ USER_AGENT = (
     "Chrome/124.0.0.0 Safari/537.36"
 )
 
-# ── Categories — direct source RSS feeds only (no Google News search) ─────────
+# ── Categories ─────────────────────────────────────────────────────────────────
 CATEGORIES = [
     {
         "name":          "INDIA",
@@ -42,6 +42,9 @@ CATEGORIES = [
             "https://indianexpress.com/section/india/feed/",
             "https://www.news18.com/rss/india.xml",
             "https://feeds.reuters.com/reuters/INtopNews",
+            "https://www.aninews.in/rss/all.xml",
+            "https://swarajyamag.com/feed",
+            "https://www.opindia.com/feed/",
         ],
     },
     {
@@ -69,6 +72,8 @@ CATEGORIES = [
             "https://indianexpress.com/section/world/feed/",
             "https://timesofindia.indiatimes.com/rssfeeds/-2128672765.cms",
             "https://feeds.reuters.com/reuters/INdomesticNews",
+            "https://www.aninews.in/rss/all.xml",
+            "https://swarajyamag.com/feed",
         ],
     },
     {
@@ -92,6 +97,9 @@ CATEGORIES = [
             "https://economictimes.indiatimes.com/news/politics-and-nation/rssfeed.cms",
             "https://www.news18.com/rss/politics.xml",
             "https://www.thehindu.com/news/national/feeder/default.rss",
+            "https://www.aninews.in/rss/all.xml",
+            "https://www.opindia.com/feed/",
+            "https://swarajyamag.com/feed",
         ],
     },
     {
@@ -118,6 +126,8 @@ CATEGORIES = [
             "https://www.news18.com/rss/india.xml",
             "https://indianexpress.com/section/india/feed/",
             "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms",
+            "https://www.aninews.in/rss/all.xml",
+            "https://www.opindia.com/feed/",
         ],
     },
     {
@@ -146,6 +156,7 @@ CATEGORIES = [
             "https://www.thehindu.com/business/feeder/default.rss",
             "https://indianexpress.com/section/business/feed/",
             "https://feeds.reuters.com/reuters/INbusinessNews",
+            "https://www.livemint.com/rss/news",
         ],
     },
     {
@@ -172,6 +183,8 @@ CATEGORIES = [
             "https://www.thehindu.com/news/national/feeder/default.rss",
             "https://indianexpress.com/section/india/feed/",
             "https://feeds.feedburner.com/ndtvnews-india-news",
+            "https://www.aninews.in/rss/all.xml",
+            "https://www.livemint.com/rss/news",
         ],
     },
 ]
