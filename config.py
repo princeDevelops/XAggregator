@@ -7,7 +7,7 @@ DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # ── Run settings ───────────────────────────────────────────────────────────────
-MAX_ARTICLES_PER_CATEGORY = 3
+MAX_ARTICLES_PER_CATEGORY = 10
 MIN_KEYWORD_SCORE         = 3   # at least one title keyword hit
 REQUEST_TIMEOUT           = 12
 USER_AGENT = (
