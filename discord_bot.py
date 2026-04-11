@@ -8,7 +8,7 @@ import time
 import requests
 from datetime import datetime, timezone
 
-from config import DISCORD_WEBHOOK_URL
+from config import DISCORD_WEBHOOK_URL, GOOGLE_ALERTS_WEBHOOK_URL
 
 COLORS = {
     "INDIA":               0xFF9933,
@@ -17,6 +17,7 @@ COLORS = {
     "SCANDALS & OUTRAGES": 0xFFAA00,
     "ECONOMY":             0x27AE60,
     "GOVT & POLICY":       0x8E44AD,
+    "GOOGLE ALERTS":       0x4285F4,
 }
 
 EMOJIS = {
@@ -26,14 +27,26 @@ EMOJIS = {
     "SCANDALS & OUTRAGES": "🔥",
     "ECONOMY":             "📈",
     "GOVT & POLICY":       "⚖️",
+    "GOOGLE ALERTS":       "🔔",
+}
+
+# maps config webhook key → actual URL
+_WEBHOOK_MAP = {
+    "GOOGLE_ALERTS_WEBHOOK_URL": GOOGLE_ALERTS_WEBHOOK_URL,
 }
 
 
-def send_article(article: dict) -> bool:
+def send_article(article: dict, webhook_key: str | None = None) -> bool:
     category = article["category"]
     emoji    = EMOJIS.get(category, "📰")
     color    = COLORS.get(category, 0x808080)
     now_utc  = datetime.now(timezone.utc).strftime("%H:%M UTC")
+
+    # use category-specific webhook if provided, else default
+    webhook_url = _WEBHOOK_MAP.get(webhook_key, DISCORD_WEBHOOK_URL) if webhook_key else DISCORD_WEBHOOK_URL
+    if not webhook_url:
+        print(f"  [discord] no webhook URL for key '{webhook_key}' — skipping")
+        return False
 
     description = article.get("description", "").strip() or "*No description available.*"
 
@@ -53,7 +66,7 @@ def send_article(article: dict) -> bool:
 
     for attempt in range(2):
         try:
-            resp = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
+            resp = requests.post(webhook_url, json=payload, timeout=10)
             if resp.status_code == 429:
                 wait = resp.json().get("retry_after", 2)
                 print(f"  [discord] rate-limited, waiting {wait}s")

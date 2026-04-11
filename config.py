@@ -1,7 +1,8 @@
 import os
 
 # ── Discord ────────────────────────────────────────────────────────────────────
-DISCORD_WEBHOOK_URL = os.environ.get("DISCORD_WEBHOOK_URL", "")
+DISCORD_WEBHOOK_URL         = os.environ.get("DISCORD_WEBHOOK_URL", "")
+GOOGLE_ALERTS_WEBHOOK_URL   = os.environ.get("GOOGLE_ALERTS_WEBHOOK_URL", "")
 
 # ── Gemini ─────────────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
@@ -185,6 +186,20 @@ CATEGORIES = [
             "https://feeds.feedburner.com/ndtvnews-india-news",
             "https://www.aninews.in/rss/all.xml",
             "https://www.livemint.com/rss/news",
+        ],
+    },
+    {
+        "name":          "GOOGLE ALERTS",
+        "emoji":         "🔔",
+        "priority":      7,
+        "gemini_budget": 0,
+        "color":         0x4285F4,
+        "webhook":       "GOOGLE_ALERTS_WEBHOOK_URL",   # sends to separate channel
+        "keywords": [
+            "india", "indian", "bharat",
+        ],
+        "feeds": [
+            "https://www.google.com/alerts/feeds/14698970451173461670/10712801714031529639",
         ],
     },
 ]

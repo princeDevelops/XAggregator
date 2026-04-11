@@ -46,7 +46,8 @@ def process_category(category: dict) -> None:
             if needs_desc and meta["description"]:
                 article["description"] = meta["description"]
 
-        ok = send_article(article)
+        webhook_key = category.get("webhook")
+        ok = send_article(article, webhook_key=webhook_key)
         if ok:
             mark_seen(article["url"], article["title"])
             sent += 1
