@@ -8,6 +8,7 @@ import base64
 import feedparser
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse, parse_qs
 
 from config import USER_AGENT, REQUEST_TIMEOUT
 
@@ -27,6 +28,24 @@ _HEADERS = {
 
 
 # ── Google News URL decoder ────────────────────────────────────────────────────
+
+def _resolve_google_redirect(url: str) -> str:
+    """
+    Google Alerts links are redirect URLs like:
+    https://www.google.com/url?rct=j&sa=t&url=https%3A%2F%2F...
+    Extract the real article URL from the `url=` query parameter.
+    """
+    if "google.com/url" not in url:
+        return url
+    try:
+        params = parse_qs(urlparse(url).query)
+        real = params.get("url", [None])[0]
+        if real and real.startswith("http"):
+            return real
+    except Exception:
+        pass
+    return url
+
 
 def _decode_gnews_url(url: str) -> str:
     """
@@ -122,6 +141,10 @@ def fetch_feed(feed_url: str) -> list[dict]:
             if not url:
                 continue
 
+            # Resolve Google Alerts redirect URLs (google.com/url?url=...) to real article URLs
+            is_google_alert = "google.com/url" in url
+            url = _resolve_google_redirect(url)
+
             raw_summary = entry.get("summary", "")
 
             # ── image: try every RSS field in priority order ──────────────────
@@ -176,11 +199,28 @@ def fetch_feed(feed_url: str) -> list[dict]:
             if not rss_desc:
                 rss_desc = BeautifulSoup(raw_summary, "html.parser").get_text(" ", strip=True)
 
+            # Google Alerts titles often contain <b>keyword</b> HTML tags — strip them.
+            # Also discard the RSS description for Google Alerts: it's the alert
+            # snippet + query string, not real article content. _enrich() will
+            # scrape the real article page for a proper description and image.
+            raw_title = entry.get("title", "").strip()
+            title = BeautifulSoup(raw_title, "html.parser").get_text(" ", strip=True)
+
+            # For Google Alerts, extract the publisher name from the description
+            # (it appears as "Article snippet - Publisher Name" in the HTML)
+            # before we clear it.
+            feed_source = feed.feed.get("title", "Unknown Source")
+            if is_google_alert:
+                src_match = re.search(r'-\s+([^<\n]+?)\s*(?:<br|$)', raw_summary)
+                if src_match:
+                    feed_source = src_match.group(1).strip()
+                rss_desc = ""
+
             articles.append({
-                "title":       entry.get("title", "").strip(),
+                "title":       title,
                 "url":         url,
                 "description": rss_desc,
-                "source":      feed.feed.get("title", "Unknown Source"),
+                "source":      feed_source,
                 "published":   entry.get("published", ""),
                 "image":       image,
                 "score":       0,
