@@ -5,7 +5,6 @@ A story is TRENDING if 3+ different sources cover it in the same run.
 """
 
 import re
-from collections import defaultdict
 
 # words too common to use for comparison
 _STOPWORDS = {

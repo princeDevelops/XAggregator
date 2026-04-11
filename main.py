@@ -74,15 +74,15 @@ def main() -> None:
 
     for category in CATEGORIES:
         articles = fetch_category_articles(category)
-        # only keep new + India-relevant + min-scored for trending detection
         fresh = [
             a for a in articles
             if a["score"] >= MIN_KEYWORD_SCORE
             and is_india_relevant(a)
             and not is_seen(a["url"])
         ]
-        category_articles[category["name"]] = articles   # full list for normal processing
+        category_articles[category["name"]] = articles
         all_articles.extend(fresh)
+        print(f"  [{category['name']}] fetched={len(articles)} fresh={len(fresh)}")
 
     # ── Step 2: detect trending stories ───────────────────────────────────────
     trending_stories = detect_trending(all_articles)
