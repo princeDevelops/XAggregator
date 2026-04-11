@@ -8,7 +8,7 @@ GOOGLE_ALERTS_WEBHOOK_URL   = os.environ.get("GOOGLE_ALERTS_WEBHOOK_URL", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # ── Run settings ───────────────────────────────────────────────────────────────
-MAX_ARTICLES_PER_CATEGORY = 15
+MAX_ARTICLES_PER_CATEGORY = 25
 MIN_KEYWORD_SCORE         = 3
 REQUEST_TIMEOUT           = 12
 USER_AGENT = (
