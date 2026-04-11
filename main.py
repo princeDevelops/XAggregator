@@ -9,11 +9,12 @@ Flow (every 30 min via GitHub Actions):
 
 import time
 
-from config      import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MIN_KEYWORD_SCORE
+from config      import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MAX_API_ARTICLES, MIN_KEYWORD_SCORE
 from db          import init_db, is_seen, mark_seen
 from fetcher     import fetch_category_articles, scrape_article_meta, is_india_relevant
 from discord_bot import send_article, send_trending, send_run_summary
 from trending    import detect_trending
+from api_fetcher import fetch_all_api_news
 
 
 def _enrich(article: dict) -> None:
@@ -110,7 +111,27 @@ def main() -> None:
         counts[category["name"]] = sent
         time.sleep(2)
 
-    # ── Step 4: run summary ────────────────────────────────────────────────────
+    # ── Step 4: API news (NewsAPI + GNews + Currents → separate channel) ────────
+    print("\n[fetching API news...]")
+    api_sent = 0
+    for article in fetch_all_api_news():
+        if api_sent >= MAX_API_ARTICLES:
+            break
+        if is_seen(article["url"]):
+            continue
+        _enrich(article)
+        ok = send_article(article, webhook_key="API_NEWS_WEBHOOK_URL")
+        if ok:
+            mark_seen(article["url"], article["title"])
+            api_sent += 1
+            print(f"  ✓ [API NEWS] {article['title'][:80]}")
+        else:
+            print(f"  ✗ [API NEWS] failed to send")
+        time.sleep(1.2)
+    print(f"  → {api_sent} article(s) sent for API NEWS")
+    counts["API NEWS"] = api_sent
+
+    # ── Step 5: run summary ────────────────────────────────────────────────────
     send_run_summary(counts, trending_count=len(trending_stories))
 
     print("\n" + "=" * 60)

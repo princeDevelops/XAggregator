@@ -8,7 +8,7 @@ import time
 import requests
 from datetime import datetime, timezone
 
-from config import DISCORD_WEBHOOK_URL, GOOGLE_ALERTS_WEBHOOK_URL
+from config import DISCORD_WEBHOOK_URL, GOOGLE_ALERTS_WEBHOOK_URL, API_NEWS_WEBHOOK_URL
 
 COLORS = {
     "INDIA":               0xFF9933,
@@ -18,6 +18,7 @@ COLORS = {
     "ECONOMY":             0x27AE60,
     "GOVT & POLICY":       0x8E44AD,
     "GOOGLE ALERTS":       0x4285F4,
+    "API NEWS":            0x00B4D8,
 }
 
 EMOJIS = {
@@ -28,11 +29,13 @@ EMOJIS = {
     "ECONOMY":             "📈",
     "GOVT & POLICY":       "⚖️",
     "GOOGLE ALERTS":       "🔔",
+    "API NEWS":            "📡",
 }
 
 # maps config webhook key → actual URL
 _WEBHOOK_MAP = {
     "GOOGLE_ALERTS_WEBHOOK_URL": GOOGLE_ALERTS_WEBHOOK_URL,
+    "API_NEWS_WEBHOOK_URL":      API_NEWS_WEBHOOK_URL,
 }
 
 

@@ -3,12 +3,19 @@ import os
 # ── Discord ────────────────────────────────────────────────────────────────────
 DISCORD_WEBHOOK_URL         = os.environ.get("DISCORD_WEBHOOK_URL", "")
 GOOGLE_ALERTS_WEBHOOK_URL   = os.environ.get("GOOGLE_ALERTS_WEBHOOK_URL", "")
+API_NEWS_WEBHOOK_URL        = os.environ.get("API_NEWS_WEBHOOK_URL", "")
+
+# ── News APIs ──────────────────────────────────────────────────────────────────
+NEWSAPI_KEY   = os.environ.get("NEWSAPI_KEY", "")
+GNEWS_KEY     = os.environ.get("GNEWS_KEY", "")
+CURRENTS_KEY  = os.environ.get("CURRENTS_KEY", "")
 
 # ── Gemini ─────────────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # ── Run settings ───────────────────────────────────────────────────────────────
 MAX_ARTICLES_PER_CATEGORY = 25
+MAX_API_ARTICLES          = 20   # per run across all three APIs combined
 MIN_KEYWORD_SCORE         = 3
 REQUEST_TIMEOUT           = 12
 USER_AGENT = (
