@@ -36,6 +36,7 @@ _CATEGORY_TAGS = {
     "GOVT & POLICY":       ["#India", "#Policy", "#Governance"],
     "GOOGLE ALERTS":       ["#India", "#IndiaNews"],
     "API NEWS":            ["#India", "#IndiaNews"],
+    "HINDU-MUSLIM":        ["#India", "#CommunalNews", "#HinduMuslim"],
 }
 
 

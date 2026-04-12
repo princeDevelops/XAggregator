@@ -206,6 +206,56 @@ CATEGORIES = [
         ],
     },
     {
+        "name":          "HINDU-MUSLIM",
+        "emoji":         "🛕",
+        "priority":      8,
+        "gemini_budget": 0,
+        "color":         0xFF6B00,
+        "keywords": [
+            # Communal violence / riots
+            "communal violence", "communal riot", "communal clash",
+            "hindu muslim clash", "religious violence", "mob lynching",
+            "lynching india", "cow vigilante", "bajrang dal", "vhp attack",
+            # Conversion / Love Jihad
+            "love jihad", "forced conversion", "conversion racket",
+            "ghar wapsi", "religious conversion india", "hindu conversion",
+            "anti-conversion law", "conversion controversy india",
+            # Temple / Mosque disputes
+            "temple demolition", "mosque demolition", "temple mosque dispute",
+            "waqf board", "waqf controversy", "masjid controversy",
+            "mandir controversy", "places of worship act",
+            # Murder / Attack by religion
+            "hindu killed", "muslim killed", "hindu murder", "muslim murder",
+            "priest attacked", "maulana arrested", "imam arrested",
+            "hindu monk killed",
+            # Hate speech / Incitement
+            "hate speech india", "religious slur india", "islamophobia india",
+            "anti-hindu", "minority attack india", "majority attack india",
+            # Political / Legal
+            "ucc uniform civil code", "triple talaq", "population jihad",
+            "land jihad", "halal controversy india", "hijab ban india",
+            "azaan controversy", "loudspeaker mosque",
+            # Organizations
+            "popular front india", "pfi banned", "hindu mahasabha",
+            # Corporate / Economic jihad
+            "corporate jihad", "economic boycott hindu", "hindu boycott",
+            "halal economy", "halal certification controversy",
+            "halal products ban", "islamic banking india",
+            "muslim business boycott", "hindu business attack",
+            "economic jihad", "land grab india", "demographic jihad",
+            "urban jihad",
+        ],
+        "feeds": [
+            "https://www.opindia.com/feed/",
+            "https://swarajyamag.com/feed",
+            "https://feeds.feedburner.com/ndtvnews-india-news",
+            "https://www.news18.com/rss/india.xml",
+            "https://indianexpress.com/section/india/feed/",
+            "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms",
+            "https://www.aninews.in/rss/all.xml",
+        ],
+    },
+    {
         "name":          "GOOGLE ALERTS",
         "emoji":         "🔔",
         "priority":      7,

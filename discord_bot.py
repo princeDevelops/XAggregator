@@ -19,6 +19,7 @@ COLORS = {
     "GOVT & POLICY":       0x8E44AD,
     "GOOGLE ALERTS":       0x4285F4,
     "API NEWS":            0x00B4D8,
+    "HINDU-MUSLIM":        0xFF6B00,
 }
 
 EMOJIS = {
@@ -30,6 +31,7 @@ EMOJIS = {
     "GOVT & POLICY":       "⚖️",
     "GOOGLE ALERTS":       "🔔",
     "API NEWS":            "📡",
+    "HINDU-MUSLIM":        "🛕",
 }
 
 # maps config webhook key → actual URL
