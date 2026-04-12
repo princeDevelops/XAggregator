@@ -4,6 +4,7 @@ import os
 DISCORD_WEBHOOK_URL         = os.environ.get("DISCORD_WEBHOOK_URL", "")
 GOOGLE_ALERTS_WEBHOOK_URL   = os.environ.get("GOOGLE_ALERTS_WEBHOOK_URL", "")
 API_NEWS_WEBHOOK_URL        = os.environ.get("API_NEWS_WEBHOOK_URL", "")
+HINDU_MUSLIM_WEBHOOK_URL    = os.environ.get("HINDU_MUSLIM_WEBHOOK_URL", "")
 
 # ── News APIs ──────────────────────────────────────────────────────────────────
 NEWSAPI_KEY   = os.environ.get("NEWSAPI_KEY", "")
@@ -211,6 +212,7 @@ CATEGORIES = [
         "priority":      8,
         "gemini_budget": 0,
         "color":         0xFF6B00,
+        "webhook":       "HINDU_MUSLIM_WEBHOOK_URL",
         "keywords": [
             # Communal violence / riots
             "communal violence", "communal riot", "communal clash",
