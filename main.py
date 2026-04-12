@@ -28,14 +28,17 @@ def _check_watchlist(article: dict) -> None:
 
 
 def _enrich(article: dict) -> None:
-    """Fill missing image / description by scraping the real article page."""
+    """
+    Scrape the real article page for image and body content.
+    Always scrapes for body — replaces short RSS descriptions with full article text.
+    """
     needs_image = not article.get("image")
-    needs_desc  = len(article.get("description", "")) < 80
+    needs_desc  = len(article.get("description", "")) < 400   # scrape if we don't already have a rich body
     if needs_image or needs_desc:
         meta = scrape_article_meta(article["url"])
         if needs_image and meta["image"]:
             article["image"] = meta["image"]
-        if needs_desc and meta["description"]:
+        if meta["description"] and len(meta["description"]) > len(article.get("description", "")):
             article["description"] = meta["description"]
 
 

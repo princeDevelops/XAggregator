@@ -13,11 +13,26 @@ from urllib.parse import urlparse, parse_qs
 from config import USER_AGENT, REQUEST_TIMEOUT
 
 INDIA_TITLE_MUST = [
-    "india", "indian", "bharat", "modi", "delhi", "mumbai",
-    "bangalore", "bengaluru", "chennai", "hyderabad", "kolkata",
+    # Country / national identifiers
+    "india", "indian", "bharat", "hindustan",
+    # Politicians
+    "modi", "rahul gandhi", "amit shah", "yogi", "kejriwal",
+    # Major cities
+    "delhi", "mumbai", "bangalore", "bengaluru", "chennai",
+    "hyderabad", "kolkata", "pune", "ahmedabad", "jaipur",
+    "lucknow", "patna", "bhopal", "chandigarh", "surat",
+    # States
+    "uttar pradesh", "rajasthan", "gujarat", "maharashtra",
+    "haryana", "kerala", "karnataka", "punjab", "bihar",
+    "madhya pradesh", "assam", "bengal", "odisha", "jharkhand",
+    # Institutions / markets
     "bjp", "congress", "lok sabha", "rajya sabha", "kashmir",
     "rbi", "sebi", "isro", "sensex", "nifty", "rupee",
     "pakistan", "india-china", "india-pak",
+    # Religious / communal (for HINDU-MUSLIM category)
+    "hindu", "muslim", "mosque", "temple", "masjid", "mandir",
+    "communal", "waqf", "riot", "lynching", "conversion",
+    "church", "sikh", "gurdwara",
 ]
 
 _HEADERS = {
@@ -75,10 +90,39 @@ def _decode_gnews_url(url: str) -> str:
 
 # ── Article meta scraper ───────────────────────────────────────────────────────
 
+def _extract_article_body(soup: BeautifulSoup) -> str | None:
+    """
+    Extract the main article body text from a parsed page.
+    Tries common article containers first, falls back to collecting
+    substantial <p> tags from anywhere on the page.
+    """
+    container = (
+        soup.find("article") or
+        soup.find(attrs={"class": re.compile(r"article[-_]?(body|text|content|detail)", re.I)}) or
+        soup.find(attrs={"class": re.compile(r"story[-_]?(body|text|content|detail)", re.I)}) or
+        soup.find(attrs={"class": re.compile(r"(news|post)[-_]?(body|text|content)", re.I)}) or
+        soup.find("main")
+    )
+
+    if container:
+        paras = [p.get_text(" ", strip=True) for p in container.find_all("p")
+                 if len(p.get_text(strip=True)) > 40]
+    else:
+        # fallback: collect all substantial paragraphs from the whole page
+        paras = [p.get_text(" ", strip=True) for p in soup.find_all("p")
+                 if len(p.get_text(strip=True)) > 60]
+
+    if not paras:
+        return None
+
+    body = " ".join(paras[:6])   # first 6 paragraphs max
+    return body[:1500] if len(body) > 100 else None
+
+
 def scrape_article_meta(url: str) -> dict:
     """
     Decode Google News redirect URL first, then scrape the real article page
-    for og:image and og:description in a single HTTP call.
+    for og:image, og:description, and article body text in a single HTTP call.
     """
     result   = {"image": None, "description": None}
     real_url = _decode_gnews_url(url)
@@ -99,16 +143,22 @@ def scrape_article_meta(url: str) -> dict:
                 result["image"] = val
                 break
 
-        for attr, name in [
-            ("property", "og:description"),
-            ("name",     "description"),
-            ("name",     "twitter:description"),
-        ]:
-            tag = soup.find("meta", attrs={attr: name})
-            val = (tag.get("content", "") if tag else "").strip()
-            if len(val) > 40:
-                result["description"] = val[:600]
-                break
+        # Try article body first — much richer than og:description
+        body = _extract_article_body(soup)
+        if body:
+            result["description"] = body
+        else:
+            # Fall back to og:description / meta description
+            for attr, name in [
+                ("property", "og:description"),
+                ("name",     "description"),
+                ("name",     "twitter:description"),
+            ]:
+                tag = soup.find("meta", attrs={attr: name})
+                val = (tag.get("content", "") if tag else "").strip()
+                if len(val) > 40:
+                    result["description"] = val[:600]
+                    break
 
     except Exception as exc:
         print(f"  [fetcher] meta scrape failed: {exc}")
