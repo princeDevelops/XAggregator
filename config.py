@@ -13,6 +13,17 @@ CURRENTS_KEY  = os.environ.get("CURRENTS_KEY", "")
 # ── Gemini ─────────────────────────────────────────────────────────────────────
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
+# ── Keyword watchlist ──────────────────────────────────────────────────────────
+# Articles whose title or description contains any of these (case-insensitive)
+# will trigger an instant alert in the main Discord channel.
+WATCHLIST = [
+    "adani", "ambani", "rahul gandhi arrested", "modi arrested",
+    "nuclear", "war declared", "ceasefire", "coup",
+    "earthquake", "flood", "terror attack", "bomb blast",
+    "stock market crash", "rupee crash", "rbi rate",
+    "supreme court verdict", "election results",
+]
+
 # ── Run settings ───────────────────────────────────────────────────────────────
 MAX_ARTICLES_PER_CATEGORY = 50
 MIN_KEYWORD_SCORE         = 3

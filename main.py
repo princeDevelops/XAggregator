@@ -9,12 +9,22 @@ Flow (every 30 min via GitHub Actions):
 
 import time
 
-from config      import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MIN_KEYWORD_SCORE
+from config      import CATEGORIES, MAX_ARTICLES_PER_CATEGORY, MIN_KEYWORD_SCORE, WATCHLIST
 from db          import init_db, is_seen, mark_seen
 from fetcher     import fetch_category_articles, scrape_article_meta, is_india_relevant
-from discord_bot import send_article, send_trending, send_run_summary
+from discord_bot import send_article, send_trending, send_run_summary, send_failure_alert, send_watchlist_alert
 from trending    import detect_trending
 from api_fetcher import fetch_all_api_news
+from caption     import generate_caption
+
+
+def _check_watchlist(article: dict) -> None:
+    """Fire a watchlist alert if the article matches any watched keyword."""
+    text = f"{article.get('title', '')} {article.get('description', '')}".lower()
+    for keyword in WATCHLIST:
+        if keyword.lower() in text:
+            send_watchlist_alert(article, keyword)
+            break   # one alert per article is enough
 
 
 def _enrich(article: dict) -> None:
@@ -48,11 +58,13 @@ def process_category(category: dict, prefetched: list[dict]) -> int:
             continue
 
         _enrich(article)
+        article["caption"] = generate_caption(article)
 
         webhook_key = category.get("webhook")
         ok = send_article(article, webhook_key=webhook_key)
         if ok:
             mark_seen(article["url"], article["title"])
+            _check_watchlist(article)
             sent += 1
             print(f"  ✓ [{name}] {article['title'][:80]}")
         else:
@@ -118,9 +130,11 @@ def main() -> None:
         if is_seen(article["url"]):
             continue
         _enrich(article)
+        article["caption"] = generate_caption(article)
         ok = send_article(article, webhook_key="API_NEWS_WEBHOOK_URL")
         if ok:
             mark_seen(article["url"], article["title"])
+            _check_watchlist(article)
             api_sent += 1
             print(f"  ✓ [API NEWS] {article['title'][:80]}")
         else:
@@ -129,7 +143,10 @@ def main() -> None:
     print(f"  → {api_sent} article(s) sent for API NEWS")
     counts["API NEWS"] = api_sent
 
-    # ── Step 5: run summary ────────────────────────────────────────────────────
+    # ── Step 5: run summary + failure alert ───────────────────────────────────
+    total_sent = sum(counts.values())
+    if total_sent == 0:
+        send_failure_alert()
     send_run_summary(counts, trending_count=len(trending_stories))
 
     print("\n" + "=" * 60)

@@ -142,6 +142,58 @@ def send_trending(trending_story: dict) -> bool:
     return False
 
 
+def send_failure_alert() -> bool:
+    """Post a red alert to the main channel when a run sends 0 articles."""
+    now_utc = datetime.now(timezone.utc).strftime("%H:%M UTC")
+    embed = {
+        "title":       "⚠️ XAggregator — Run sent 0 articles",
+        "description": "No articles were sent this run. Check GitHub Actions logs for errors.",
+        "color":       0xFF0000,
+        "footer":      {"text": now_utc},
+    }
+    payload = {"embeds": [embed]}
+    try:
+        resp = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
+        resp.raise_for_status()
+        return True
+    except Exception as exc:
+        print(f"  [discord] failure alert error: {exc}")
+        return False
+
+
+def send_watchlist_alert(article: dict, keyword: str) -> bool:
+    """Post a 🚨 alert when a sent article matches a watchlist keyword."""
+    now_utc  = datetime.now(timezone.utc).strftime("%H:%M UTC")
+    category = article.get("category", "")
+    emoji    = EMOJIS.get(category, "📰")
+
+    embed = {
+        "author":      {"name": f"🚨  WATCHLIST HIT  •  {emoji} {category}"},
+        "title":       article["title"][:256],
+        "url":         article["url"],
+        "description": f"**Matched keyword:** `{keyword}`\n\n{article.get('description', '').strip()[:300]}",
+        "color":       0xFF4500,
+        "footer":      {"text": f"📰 {article['source']}   •   {now_utc}"},
+    }
+    if article.get("image"):
+        embed["image"] = {"url": article["image"]}
+
+    payload = {"embeds": [embed]}
+    for attempt in range(2):
+        try:
+            resp = requests.post(DISCORD_WEBHOOK_URL, json=payload, timeout=10)
+            if resp.status_code == 429:
+                wait = resp.json().get("retry_after", 2)
+                time.sleep(float(wait) + 0.5)
+                continue
+            resp.raise_for_status()
+            return True
+        except Exception as exc:
+            print(f"  [discord] watchlist alert error (attempt {attempt + 1}): {exc}")
+            time.sleep(1)
+    return False
+
+
 def send_article(article: dict, webhook_key: str | None = None) -> bool:
     category = article["category"]
     emoji    = EMOJIS.get(category, "📰")
@@ -167,6 +219,9 @@ def send_article(article: dict, webhook_key: str | None = None) -> bool:
 
     if article.get("image"):
         embed["image"] = {"url": article["image"]}
+
+    if article.get("caption"):
+        embed["fields"] = [{"name": "📸 Instagram Caption", "value": article["caption"][:1024], "inline": False}]
 
     payload = {"embeds": [embed]}
 
