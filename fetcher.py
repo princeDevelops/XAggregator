@@ -115,8 +115,8 @@ def _extract_article_body(soup: BeautifulSoup) -> str | None:
     if not paras:
         return None
 
-    body = " ".join(paras[:6])   # first 6 paragraphs max
-    return body[:1500] if len(body) > 100 else None
+    body = " ".join(paras[:15])
+    return body[:4000] if len(body) > 100 else None
 
 
 def scrape_article_meta(url: str) -> dict:
@@ -157,7 +157,7 @@ def scrape_article_meta(url: str) -> dict:
                 tag = soup.find("meta", attrs={attr: name})
                 val = (tag.get("content", "") if tag else "").strip()
                 if len(val) > 40:
-                    result["description"] = val[:600]
+                    result["description"] = val[:4000]
                     break
 
     except Exception as exc:
@@ -244,7 +244,7 @@ def fetch_feed(feed_url: str) -> list[dict]:
                     ct.get("value", ""), "html.parser"
                 ).get_text(" ", strip=True)
                 if len(full_text) > len(rss_desc):
-                    rss_desc = full_text[:600]
+                    rss_desc = full_text[:4000]
 
             if not rss_desc:
                 rss_desc = BeautifulSoup(raw_summary, "html.parser").get_text(" ", strip=True)

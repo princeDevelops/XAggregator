@@ -58,7 +58,7 @@ def fetch_newsapi() -> list[dict]:
             articles.append({
                 "title":       (a.get("title") or "").strip(),
                 "url":         url,
-                "description": (a.get("description") or "").strip()[:600],
+                "description": (a.get("description") or "").strip()[:4000],
                 "source":      a.get("source", {}).get("name") or "NewsAPI",
                 "image":       a.get("urlToImage") or None,
                 "published":   a.get("publishedAt", ""),
@@ -92,7 +92,7 @@ def fetch_gnews() -> list[dict]:
             articles.append({
                 "title":       (a.get("title") or "").strip(),
                 "url":         url,
-                "description": (a.get("description") or "").strip()[:600],
+                "description": (a.get("description") or "").strip()[:4000],
                 "source":      a.get("source", {}).get("name") or "GNews",
                 "image":       a.get("image") or None,
                 "published":   a.get("publishedAt", ""),
@@ -129,7 +129,7 @@ def fetch_currents() -> list[dict]:
             articles.append({
                 "title":       (a.get("title") or "").strip(),
                 "url":         url,
-                "description": (a.get("description") or "").strip()[:600],
+                "description": (a.get("description") or "").strip()[:4000],
                 "source":      a.get("author") or "Currents",
                 "image":       image,
                 "published":   a.get("published", ""),
