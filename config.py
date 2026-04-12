@@ -14,7 +14,7 @@ CURRENTS_KEY  = os.environ.get("CURRENTS_KEY", "")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
 
 # ── Run settings ───────────────────────────────────────────────────────────────
-MAX_ARTICLES_PER_CATEGORY = 25
+MAX_ARTICLES_PER_CATEGORY = 50
 MIN_KEYWORD_SCORE         = 3
 REQUEST_TIMEOUT           = 12
 USER_AGENT = (
