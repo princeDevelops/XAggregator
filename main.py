@@ -48,6 +48,7 @@ def process_category(category: dict, prefetched: list[dict]) -> int:
     sent = 0
 
     skip_filters = category.get("skip_filters", False)
+    channel      = category.get("webhook") or "main"
 
     for article in prefetched:
         if sent >= MAX_ARTICLES_PER_CATEGORY:
@@ -57,7 +58,7 @@ def process_category(category: dict, prefetched: list[dict]) -> int:
                 continue
             if not is_india_relevant(article):
                 continue
-        if is_seen(article["url"]):
+        if is_seen(article["url"], channel):
             continue
 
         _enrich(article)
@@ -66,7 +67,7 @@ def process_category(category: dict, prefetched: list[dict]) -> int:
         webhook_key = category.get("webhook")
         ok = send_article(article, webhook_key=webhook_key)
         if ok:
-            mark_seen(article["url"], article["title"])
+            mark_seen(article["url"], article["title"], channel)
             _check_watchlist(article)
             sent += 1
             print(f"  ✓ [{name}] {article['title'][:80]}")
@@ -93,11 +94,12 @@ def main() -> None:
 
     for category in CATEGORIES:
         articles = fetch_category_articles(category)
+        channel = category.get("webhook") or "main"
         fresh = [
             a for a in articles
             if a["score"] >= MIN_KEYWORD_SCORE
             and is_india_relevant(a)
-            and not is_seen(a["url"])
+            and not is_seen(a["url"], channel)
         ]
         category_articles[category["name"]] = articles
         all_articles.extend(fresh)
@@ -130,13 +132,13 @@ def main() -> None:
     print("\n[fetching API news...]")
     api_sent = 0
     for article in fetch_all_api_news():
-        if is_seen(article["url"]):
+        if is_seen(article["url"], "API_NEWS_WEBHOOK_URL"):
             continue
         _enrich(article)
         article["caption"] = generate_caption(article)
         ok = send_article(article, webhook_key="API_NEWS_WEBHOOK_URL")
         if ok:
-            mark_seen(article["url"], article["title"])
+            mark_seen(article["url"], article["title"], "API_NEWS_WEBHOOK_URL")
             _check_watchlist(article)
             api_sent += 1
             print(f"  ✓ [API NEWS] {article['title'][:80]}")
