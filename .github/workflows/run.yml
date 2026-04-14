@@ -43,6 +43,7 @@ jobs:
           API_NEWS_WEBHOOK_URL:      ${{ secrets.API_NEWS_WEBHOOK_URL }}
           HINDU_MUSLIM_WEBHOOK_URL:  ${{ secrets.HINDU_MUSLIM_WEBHOOK_URL }}
           VIDEO_WEBHOOK_URL:         ${{ secrets.VIDEO_WEBHOOK_URL }}
+          PAKISTAN_WEBHOOK_URL:      ${{ secrets.PAKISTAN_WEBHOOK_URL }}
           NEWSAPI_KEY:               ${{ secrets.NEWSAPI_KEY }}
           GNEWS_KEY:                 ${{ secrets.GNEWS_KEY }}
           CURRENTS_KEY:              ${{ secrets.CURRENTS_KEY }}

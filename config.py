@@ -6,6 +6,7 @@ GOOGLE_ALERTS_WEBHOOK_URL   = os.environ.get("GOOGLE_ALERTS_WEBHOOK_URL", "")
 API_NEWS_WEBHOOK_URL        = os.environ.get("API_NEWS_WEBHOOK_URL", "")
 HINDU_MUSLIM_WEBHOOK_URL    = os.environ.get("HINDU_MUSLIM_WEBHOOK_URL", "")
 VIDEO_WEBHOOK_URL           = os.environ.get("VIDEO_WEBHOOK_URL", "")
+PAKISTAN_WEBHOOK_URL        = os.environ.get("PAKISTAN_WEBHOOK_URL", "")
 
 # ── YouTube channels ───────────────────────────────────────────────────────────
 YOUTUBE_CHANNELS = {
@@ -271,6 +272,73 @@ CATEGORIES = [
             "https://indianexpress.com/section/india/feed/",
             "https://timesofindia.indiatimes.com/rssfeeds/296589292.cms",
             "https://www.aninews.in/rss/all.xml",
+        ],
+    },
+    {
+        "name":            "PAKISTAN",
+        "emoji":           "🇵🇰",
+        "priority":        9,
+        "gemini_budget":   0,
+        "color":           0x01411C,
+        "webhook":         "PAKISTAN_WEBHOOK_URL",
+        "skip_india_filter": True,   # Pakistani sources don't say "Pakistan" in every headline
+        "keywords": [
+            # Politicians & parties
+            "imran khan", "pti", "tehreek-e-insaf",
+            "shehbaz sharif", "shehbaz", "pmln", "nawaz sharif",
+            "bilawal bhutto", "bilawal", "ppp pakistan",
+            "asif zardari", "zardari",
+            "maulana fazlur", "jui",
+            # Military & intelligence
+            "pakistan army", "pak army", "isi pakistan",
+            "asim munir", "coas pakistan",
+            "pakistan air force", "pakistan navy", "pakistan military",
+            # India-Pakistan relations
+            "pakistan india", "india pakistan",
+            "pakistan kashmir", "pakistan border",
+            "pakistan ceasefire", "pakistan loc",
+            "pakistan india tension", "pakistan india war",
+            "pakistan india relations",
+            # Terror & security
+            "ttp", "tehrik-i-taliban",
+            "lashkar", "jaish",
+            "pakistan terror", "pakistan attack", "pakistan blast",
+            "baloch", "balochistan",
+            "pakistan militant",
+            # Economy
+            "pakistan economy", "pakistan imf",
+            "pakistan rupee", "pakistan debt",
+            "pakistan default", "cpec",
+            # Cities
+            "karachi", "lahore", "islamabad",
+            "rawalpindi", "peshawar", "quetta",
+            # Celebrities & media
+            "mahira khan", "fawad khan",
+            "pakistan celebrity", "pakistan actor",
+            "geo news", "dawn news", "ary news",
+            "pakistan viral", "pakistan trending",
+            # General
+            "pakistan", "pakistani",
+            "pakistan government", "pakistan parliament",
+            "pakistan election", "pakistan politics",
+            "pakistan news", "pakistan crisis",
+        ],
+        "feeds": [
+            # Pakistani sources
+            "https://www.dawn.com/feeds/latest-news",
+            "https://arynews.tv/feed/",
+            "https://tribune.com.pk/feed/",
+            "https://www.geo.tv/rss/1",
+            "https://www.thenews.com.pk/rss/1/1",
+            "https://samaaenglish.tv/feed/",
+            # Indian sources covering Pakistan
+            "https://feeds.feedburner.com/ndtvnews-world-news",
+            "https://www.thehindu.com/news/international/feeder/default.rss",
+            "https://indianexpress.com/section/world/feed/",
+            "https://feeds.reuters.com/reuters/INdomesticNews",
+            "https://www.aninews.in/rss/all.xml",
+            "https://swarajyamag.com/feed",
+            "https://www.opindia.com/feed/",
         ],
     },
     {

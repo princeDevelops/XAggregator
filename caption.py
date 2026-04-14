@@ -38,6 +38,7 @@ _CATEGORY_TAGS = {
     "API NEWS":            ["#India", "#IndiaNews"],
     "HINDU-MUSLIM":        ["#India", "#CommunalNews", "#HinduMuslim"],
     "VIDEO":               ["#India", "#IndiaNews", "#Watch"],
+    "PAKISTAN":            ["#Pakistan", "#PakistanNews", "#IndoPak"],
 }
 
 

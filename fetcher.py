@@ -203,17 +203,23 @@ def fetch_feed(feed_url: str) -> list[dict]:
             # 1. media:content  (Economic Times, Indian Express, many sites)
             for mc in entry.get("media_content", []):
                 url_candidate = mc.get("url", "")
-                if url_candidate.startswith("http") and "googleusercontent.com" not in url_candidate:
+                # For Google Alerts, skip googleusercontent.com — those are
+                # auto-generated title cards, not real article photos.
+                # For regular RSS feeds (NDTV FeedBurner etc.), allow them —
+                # FeedBurner legitimately proxies article images via Google's CDN.
+                if url_candidate.startswith("http") and (
+                    not is_google_alert or "googleusercontent.com" not in url_candidate
+                ):
                     image = url_candidate
                     break
 
             # 2. media:thumbnail  (NDTV via FeedBurner, News18)
-            #    Skip googleusercontent.com — those are Google's auto-generated
-            #    title cards that visually repeat the headline, not real photos.
             if not image:
                 for mt in entry.get("media_thumbnail", []):
                     url_candidate = mt.get("url", "")
-                    if url_candidate.startswith("http") and "googleusercontent.com" not in url_candidate:
+                    if url_candidate.startswith("http") and (
+                        not is_google_alert or "googleusercontent.com" not in url_candidate
+                    ):
                         image = url_candidate
                         break
 

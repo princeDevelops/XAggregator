@@ -8,7 +8,7 @@ import time
 import requests
 from datetime import datetime, timezone
 
-from config import DISCORD_WEBHOOK_URL, GOOGLE_ALERTS_WEBHOOK_URL, API_NEWS_WEBHOOK_URL, HINDU_MUSLIM_WEBHOOK_URL, VIDEO_WEBHOOK_URL
+from config import DISCORD_WEBHOOK_URL, GOOGLE_ALERTS_WEBHOOK_URL, API_NEWS_WEBHOOK_URL, HINDU_MUSLIM_WEBHOOK_URL, VIDEO_WEBHOOK_URL, PAKISTAN_WEBHOOK_URL
 
 COLORS = {
     "INDIA":               0xFF9933,
@@ -21,6 +21,7 @@ COLORS = {
     "API NEWS":            0x00B4D8,
     "HINDU-MUSLIM":        0xFF6B00,
     "VIDEO":               0xFF0000,
+    "PAKISTAN":            0x01411C,
 }
 
 EMOJIS = {
@@ -34,6 +35,7 @@ EMOJIS = {
     "API NEWS":            "📡",
     "HINDU-MUSLIM":        "🛕",
     "VIDEO":               "▶️",
+    "PAKISTAN":            "🇵🇰",
 }
 
 # maps config webhook key → actual URL
@@ -42,6 +44,7 @@ _WEBHOOK_MAP = {
     "API_NEWS_WEBHOOK_URL":       API_NEWS_WEBHOOK_URL,
     "HINDU_MUSLIM_WEBHOOK_URL":   HINDU_MUSLIM_WEBHOOK_URL,
     "VIDEO_WEBHOOK_URL":          VIDEO_WEBHOOK_URL,
+    "PAKISTAN_WEBHOOK_URL":       PAKISTAN_WEBHOOK_URL,
 }
 
 

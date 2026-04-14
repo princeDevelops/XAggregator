@@ -48,8 +48,9 @@ def process_category(category: dict, prefetched: list[dict]) -> int:
     name = category["name"]
     sent = 0
 
-    skip_filters = category.get("skip_filters", False)
-    channel      = category.get("webhook") or "main"
+    skip_filters      = category.get("skip_filters", False)
+    skip_india_filter = category.get("skip_india_filter", False)
+    channel           = category.get("webhook") or "main"
 
     for article in prefetched:
         if sent >= MAX_ARTICLES_PER_CATEGORY:
@@ -57,7 +58,7 @@ def process_category(category: dict, prefetched: list[dict]) -> int:
         if not skip_filters:
             if article["score"] < MIN_KEYWORD_SCORE:
                 continue
-            if not is_india_relevant(article):
+            if not skip_india_filter and not is_india_relevant(article):
                 continue
         if is_seen(article["url"], channel):
             continue
@@ -96,10 +97,11 @@ def main() -> None:
     for category in CATEGORIES:
         articles = fetch_category_articles(category)
         channel = category.get("webhook") or "main"
+        skip_india = category.get("skip_india_filter", False)
         fresh = [
             a for a in articles
             if a["score"] >= MIN_KEYWORD_SCORE
-            and is_india_relevant(a)
+            and (skip_india or is_india_relevant(a))
             and not is_seen(a["url"], channel)
         ]
         category_articles[category["name"]] = articles
