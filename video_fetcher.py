@@ -31,10 +31,45 @@ def _best_thumbnail(entry) -> str | None:
 
 
 def _clean_description(raw: str) -> str:
-    """Strip HTML from YouTube RSS summary field."""
+    """
+    Strip HTML and remove boilerplate from YouTube video descriptions.
+    Indian news channels paste subscribe links, social handles, and website
+    URLs at the bottom of every video — we stop before that section.
+    """
     if not raw:
         return ""
-    return BeautifulSoup(raw, "html.parser").get_text(" ", strip=True)[:4000]
+
+    text = BeautifulSoup(raw, "html.parser").get_text("\n", strip=True)
+
+    # Patterns that signal the start of channel boilerplate
+    _BOILERPLATE = (
+        "subscribe", "follow us", "like us", "facebook.com", "twitter.com",
+        "instagram.com", "youtube.com/c/", "youtube.com/channel",
+        "t.me/", "whatsapp", "telegram", "download our app",
+        "visit our website", "for more news", "watch more",
+        "click here", "hit the bell", "like & subscribe",
+        "app.link", "onelink", "linktr.ee",
+    )
+
+    clean_lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            # allow one blank line, skip repeated blanks
+            if clean_lines and clean_lines[-1] != "":
+                clean_lines.append("")
+            continue
+        if any(p in stripped.lower() for p in _BOILERPLATE):
+            break   # stop here — everything after is boilerplate
+        if stripped.startswith("http"):
+            break   # bare URL = boilerplate section started
+        clean_lines.append(stripped)
+
+    # trim trailing blank lines
+    while clean_lines and clean_lines[-1] == "":
+        clean_lines.pop()
+
+    return "\n".join(clean_lines)[:4000]
 
 
 def fetch_youtube_channel(channel_id: str, channel_name: str) -> list[dict]:
