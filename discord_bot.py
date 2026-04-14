@@ -8,7 +8,7 @@ import time
 import requests
 from datetime import datetime, timezone
 
-from config import DISCORD_WEBHOOK_URL, GOOGLE_ALERTS_WEBHOOK_URL, API_NEWS_WEBHOOK_URL, HINDU_MUSLIM_WEBHOOK_URL
+from config import DISCORD_WEBHOOK_URL, GOOGLE_ALERTS_WEBHOOK_URL, API_NEWS_WEBHOOK_URL, HINDU_MUSLIM_WEBHOOK_URL, VIDEO_WEBHOOK_URL
 
 COLORS = {
     "INDIA":               0xFF9933,
@@ -20,6 +20,7 @@ COLORS = {
     "GOOGLE ALERTS":       0x4285F4,
     "API NEWS":            0x00B4D8,
     "HINDU-MUSLIM":        0xFF6B00,
+    "VIDEO":               0xFF0000,
 }
 
 EMOJIS = {
@@ -32,6 +33,7 @@ EMOJIS = {
     "GOOGLE ALERTS":       "🔔",
     "API NEWS":            "📡",
     "HINDU-MUSLIM":        "🛕",
+    "VIDEO":               "▶️",
 }
 
 # maps config webhook key → actual URL
@@ -39,6 +41,7 @@ _WEBHOOK_MAP = {
     "GOOGLE_ALERTS_WEBHOOK_URL":  GOOGLE_ALERTS_WEBHOOK_URL,
     "API_NEWS_WEBHOOK_URL":       API_NEWS_WEBHOOK_URL,
     "HINDU_MUSLIM_WEBHOOK_URL":   HINDU_MUSLIM_WEBHOOK_URL,
+    "VIDEO_WEBHOOK_URL":          VIDEO_WEBHOOK_URL,
 }
 
 
@@ -210,9 +213,10 @@ def send_article(article: dict, webhook_key: str | None = None) -> bool:
         return False
 
     description = article.get("description", "").strip() or "*No description available.*"
+    author_name = f"▶️  {emoji}  {category}  •  {article['source']}" if article.get("is_video") else f"{emoji}  {category}"
 
     embed: dict = {
-        "author":      {"name": f"{emoji}  {category}"},
+        "author":      {"name": author_name},
         "title":       article["title"][:256],
         "url":         article["url"],
         "description": description[:4096],

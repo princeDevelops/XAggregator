@@ -37,6 +37,7 @@ _CATEGORY_TAGS = {
     "GOOGLE ALERTS":       ["#India", "#IndiaNews"],
     "API NEWS":            ["#India", "#IndiaNews"],
     "HINDU-MUSLIM":        ["#India", "#CommunalNews", "#HinduMuslim"],
+    "VIDEO":               ["#India", "#IndiaNews", "#Watch"],
 }
 
 

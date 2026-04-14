@@ -14,8 +14,9 @@ from db          import init_db, is_seen, mark_seen
 from fetcher     import fetch_category_articles, scrape_article_meta, is_india_relevant
 from discord_bot import send_article, send_trending, send_run_summary, send_failure_alert, send_watchlist_alert
 from trending    import detect_trending
-from api_fetcher import fetch_all_api_news
-from caption     import generate_caption
+from api_fetcher   import fetch_all_api_news
+from video_fetcher import fetch_all_videos
+from caption       import generate_caption
 
 
 def _check_watchlist(article: dict) -> None:
@@ -148,7 +149,26 @@ def main() -> None:
     print(f"  → {api_sent} article(s) sent for API NEWS")
     counts["API NEWS"] = api_sent
 
-    # ── Step 5: run summary + failure alert ───────────────────────────────────
+    # ── Step 5: YouTube videos → separate channel ─────────────────────────────
+    print("\n[fetching YouTube videos...]")
+    video_sent = 0
+    for video in fetch_all_videos():
+        if is_seen(video["url"], "VIDEO_WEBHOOK_URL"):
+            continue
+        video["caption"] = generate_caption(video)
+        ok = send_article(video, webhook_key="VIDEO_WEBHOOK_URL")
+        if ok:
+            mark_seen(video["url"], video["title"], "VIDEO_WEBHOOK_URL")
+            _check_watchlist(video)
+            video_sent += 1
+            print(f"  ✓ [VIDEO] {video['source']} — {video['title'][:70]}")
+        else:
+            print(f"  ✗ [VIDEO] failed to send")
+        time.sleep(1.2)
+    print(f"  → {video_sent} video(s) sent")
+    counts["VIDEO"] = video_sent
+
+    # ── Step 6: run summary + failure alert ───────────────────────────────────
     total_sent = sum(counts.values())
     if total_sent == 0:
         send_failure_alert()

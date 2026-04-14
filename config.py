@@ -5,6 +5,22 @@ DISCORD_WEBHOOK_URL         = os.environ.get("DISCORD_WEBHOOK_URL", "")
 GOOGLE_ALERTS_WEBHOOK_URL   = os.environ.get("GOOGLE_ALERTS_WEBHOOK_URL", "")
 API_NEWS_WEBHOOK_URL        = os.environ.get("API_NEWS_WEBHOOK_URL", "")
 HINDU_MUSLIM_WEBHOOK_URL    = os.environ.get("HINDU_MUSLIM_WEBHOOK_URL", "")
+VIDEO_WEBHOOK_URL           = os.environ.get("VIDEO_WEBHOOK_URL", "")
+
+# ── YouTube channels ───────────────────────────────────────────────────────────
+YOUTUBE_CHANNELS = {
+    "NDTV India":  "UC9CYT9gSNLevX5ey2_6CK0Q",
+    "NDTV":        "UCZFMm1mMw0F81Z37aaEzTUA",
+    "Aaj Tak":     "UCt4t-jeY85JegMlZ-E5UWtA",
+    "India Today": "UCYPvAwZP8pZhSMW8qs7cVCw",
+    "Zee News":    "UCIvaYmXn910QMdemBG3v1pQ",
+    "News18":      "UCPP3etACgdUWvizcES1dJ8Q",
+    "ET Now":      "UCI_mwTKUhicNzFrhm33MzBQ",
+    "WION":        "UC_gUM8rL-Lrg6O3adPW9K1g",
+    "ABP News":    "UCRWFSbif-RFENbBrSiez1DA",
+    "Times Now":   "UC6RJ7-PaXg6TIH2BzZfTV7w",
+    "Republic TV": "UCwqusr8YDwM-3mEYTDeJHzw",
+}
 
 # ── News APIs ──────────────────────────────────────────────────────────────────
 NEWSAPI_KEY   = os.environ.get("NEWSAPI_KEY", "")
