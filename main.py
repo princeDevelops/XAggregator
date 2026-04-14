@@ -17,6 +17,7 @@ from trending    import detect_trending
 from api_fetcher   import fetch_all_api_news
 from video_fetcher import fetch_all_videos
 from caption       import generate_caption
+from summarizer    import summarize_article
 
 
 def _check_watchlist(article: dict) -> None:
@@ -64,6 +65,9 @@ def process_category(category: dict, prefetched: list[dict]) -> int:
             continue
 
         _enrich(article)
+        summary = summarize_article(article["title"], article.get("description", ""))
+        if summary:
+            article["description"] = summary
         article["caption"] = generate_caption(article)
 
         webhook_key = category.get("webhook")
@@ -138,6 +142,9 @@ def main() -> None:
         if is_seen(article["url"], "API_NEWS_WEBHOOK_URL"):
             continue
         _enrich(article)
+        summary = summarize_article(article["title"], article.get("description", ""))
+        if summary:
+            article["description"] = summary
         article["caption"] = generate_caption(article)
         ok = send_article(article, webhook_key="API_NEWS_WEBHOOK_URL")
         if ok:
