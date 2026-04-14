@@ -232,6 +232,11 @@ CATEGORIES = [
         "color":         0xFF6B00,
         "webhook":       "HINDU_MUSLIM_WEBHOOK_URL",
         "keywords": [
+            # Short / flexible triggers (single words score 3 from title match)
+            "communal", "lynching", "waqf", "halal", "hijab",
+            "masjid", "mandir", "azaan", "namaz",
+            "mob attack", "religious tension", "religious conflict",
+            "temple dispute", "mosque dispute", "communal tension",
             # Communal violence / riots
             "communal violence", "communal riot", "communal clash",
             "hindu muslim clash", "religious violence", "mob lynching",

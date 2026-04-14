@@ -28,7 +28,7 @@ INDIA_TITLE_MUST = [
     # Institutions / markets
     "bjp", "congress", "lok sabha", "rajya sabha", "kashmir",
     "rbi", "sebi", "isro", "sensex", "nifty", "rupee",
-    "pakistan", "india-china", "india-pak",
+    "india-china", "india-pak", "india pakistan",
     # Religious / communal (for HINDU-MUSLIM category)
     "hindu", "muslim", "mosque", "temple", "masjid", "mandir",
     "communal", "waqf", "riot", "lynching", "conversion",

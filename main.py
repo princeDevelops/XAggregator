@@ -20,6 +20,31 @@ from caption       import generate_caption
 from summarizer    import summarize_article
 
 
+def _apply_summary(article: dict) -> None:
+    """
+    Call Groq to summarize the article body.
+    If successful, sets description to:
+      🤖 AI Summary  (2-3 sentences)
+      ──────────────
+      Full Article  (original body, truncated to fit Discord's 4096-char limit)
+    Falls back to original description if Groq is unavailable.
+    """
+    body = article.get("description", "")
+    summary = summarize_article(article["title"], body)
+    if not summary:
+        return
+
+    # Caption uses the clean summary as its body (better first sentence)
+    article["_summary_for_caption"] = summary
+
+    combined = (
+        f"🤖 **AI Summary**\n{summary}\n\n"
+        f"─────────────────────────\n"
+        f"{body[:3500]}"
+    )
+    article["description"] = combined[:4096]
+
+
 def _check_watchlist(article: dict) -> None:
     """Fire a watchlist alert if the article matches any watched keyword."""
     text = f"{article.get('title', '')} {article.get('description', '')}".lower()
@@ -65,10 +90,15 @@ def process_category(category: dict, prefetched: list[dict]) -> int:
             continue
 
         _enrich(article)
-        summary = summarize_article(article["title"], article.get("description", ""))
-        if summary:
-            article["description"] = summary
-        article["caption"] = generate_caption(article)
+        _apply_summary(article)
+        # Caption uses clean summary when available, otherwise full description
+        cap_desc = article.pop("_summary_for_caption", None)
+        if cap_desc:
+            article["description"], cap_desc = cap_desc, article["description"]
+            article["caption"] = generate_caption(article)
+            article["description"] = cap_desc
+        else:
+            article["caption"] = generate_caption(article)
 
         webhook_key = category.get("webhook")
         ok = send_article(article, webhook_key=webhook_key)
@@ -136,24 +166,38 @@ def main() -> None:
         time.sleep(2)
 
     # ── Step 4: API news (NewsAPI + GNews + Currents → separate channel) ────────
+    # Articles categorized as PAKISTAN or HINDU-MUSLIM are routed to their
+    # dedicated channels; everything else goes to API NEWS.
     print("\n[fetching API news...]")
     api_sent = 0
     for article in fetch_all_api_news():
-        if is_seen(article["url"], "API_NEWS_WEBHOOK_URL"):
+        cat = article.get("category", "")
+        if cat == "PAKISTAN":
+            webhook_key = "PAKISTAN_WEBHOOK_URL"
+        elif cat == "HINDU-MUSLIM":
+            webhook_key = "HINDU_MUSLIM_WEBHOOK_URL"
+        else:
+            webhook_key = "API_NEWS_WEBHOOK_URL"
+
+        if is_seen(article["url"], webhook_key):
             continue
         _enrich(article)
-        summary = summarize_article(article["title"], article.get("description", ""))
-        if summary:
-            article["description"] = summary
-        article["caption"] = generate_caption(article)
-        ok = send_article(article, webhook_key="API_NEWS_WEBHOOK_URL")
+        _apply_summary(article)
+        cap_desc = article.pop("_summary_for_caption", None)
+        if cap_desc:
+            article["description"], cap_desc = cap_desc, article["description"]
+            article["caption"] = generate_caption(article)
+            article["description"] = cap_desc
+        else:
+            article["caption"] = generate_caption(article)
+        ok = send_article(article, webhook_key=webhook_key)
         if ok:
-            mark_seen(article["url"], article["title"], "API_NEWS_WEBHOOK_URL")
+            mark_seen(article["url"], article["title"], webhook_key)
             _check_watchlist(article)
             api_sent += 1
-            print(f"  ✓ [API NEWS] {article['title'][:80]}")
+            print(f"  ✓ [API NEWS/{cat}] {article['title'][:80]}")
         else:
-            print(f"  ✗ [API NEWS] failed to send")
+            print(f"  ✗ [API NEWS/{cat}] failed to send")
         time.sleep(1.2)
     print(f"  → {api_sent} article(s) sent for API NEWS")
     counts["API NEWS"] = api_sent
